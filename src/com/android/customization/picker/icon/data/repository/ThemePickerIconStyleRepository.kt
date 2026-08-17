@@ -163,25 +163,6 @@ constructor(
         return isEnabled
     }
 
-    private fun getShouldShowAppLabels(previewUtils: PreviewUtils): Boolean {
-        val cursor =
-            contentResolver.query(
-                previewUtils.getUri(HIDE_APP_LABELS),
-                /* projection= */ null,
-                /* selection= */ null,
-                /* selectionArgs= */ null,
-                /* sortOrder= */ null,
-            )
-        var shouldHideLabels = false
-        cursor?.use {
-            if (cursor.moveToNext()) {
-                shouldHideLabels =
-                    (cursor.getInt(cursor.getColumnIndex(COL_HIDE_APP_NAMES)) == ENABLED)
-            }
-        }
-        return !shouldHideLabels
-    }
-
     override suspend fun setThemedIconEnabled(enabled: Boolean) {
         previewUtilsFlow.first()?.let {
             val values = ContentValues()
@@ -222,62 +203,10 @@ constructor(
         }
     }
 
-    override val shouldShowAppLabels: Flow<Boolean> =
-        previewUtilsFlow
-            .flatMapLatest {
-                callbackFlow {
-                    var disposableHandle: DisposableHandle? = null
-                    if (it != null) {
-                        val contentObserver =
-                            object : ContentObserver(null) {
-                                override fun onChange(selfChange: Boolean) {
-                                    trySend(getShouldShowAppLabels(it))
-                                }
-                            }
-                        contentResolver.registerContentObserver(
-                            it.getUri(SET_HIDE_APP_LABELS),
-                            /* notifyForDescendants= */ true,
-                            contentObserver,
-                        )
-
-                        trySend(getShouldShowAppLabels(it))
-
-                        disposableHandle = DisposableHandle {
-                            contentResolver.unregisterContentObserver(contentObserver)
-                        }
-                    }
-                    awaitClose { disposableHandle?.dispose() }
-                }
-            }
-            .stateIn(
-                scope = backgroundScope,
-                started = SharingStarted.WhileSubscribed(),
-                initialValue = false,
-            )
-
-    override suspend fun setShouldShowAppLabels(shouldShowAppLabels: Boolean) {
-        previewUtilsFlow.first()?.let {
-            val values = ContentValues()
-            values.put(COL_HIDE_APP_NAMES, !shouldShowAppLabels)
-            contentResolver.update(
-                it.getUri(SET_HIDE_APP_LABELS),
-                values,
-                /* where= */ null,
-                /* selectionArgs= */ null,
-            )
-        }
-    }
-
     companion object {
         const val ICON_THEMED = "icon_themed"
         const val SET_ICON_THEMED = "set_icon_themed"
         const val COL_ICON_THEMED_VALUE = "boolean_value"
-        // String for building uri when querying and updating the boolean to hide the app names
-        private const val HIDE_APP_LABELS = "workspace_items_label_hidden"
-        // Key for applying the boolean to hide the app names on the home screen, to the system
-        private const val SET_HIDE_APP_LABELS = "set_workspace_items_label_hidden"
-        // Key for querying the boolean to hide the app names on the home screen
-        private const val COL_HIDE_APP_NAMES = "boolean_value"
         private const val ENABLED = 1
     }
 }

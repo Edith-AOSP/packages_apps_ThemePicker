@@ -17,8 +17,6 @@
 package com.android.customization.picker.icon.ui.viewmodel
 
 import android.content.Context
-import android.platform.test.annotations.DisableFlags
-import android.platform.test.annotations.EnableFlags
 import android.platform.test.flag.junit.SetFlagsRule
 import android.stats.style.StyleEnums.APP_ICON_STYLE_THEMED
 import android.stats.style.StyleEnums.APP_ICON_STYLE_UNSPECIFIED
@@ -179,19 +177,6 @@ class AppIconPickerViewModelTest {
         }
 
     @Test
-    fun iconStyleAndShapeOnApply_shouldBeNonnull_whenTogglingShouldShowAppLabels() =
-        testScope.runTest {
-            val toggleShouldShowAppLabels = collectLastValue(underTest.toggleShouldShowAppLabels)
-            val onApply = collectLastValue(underTest.iconStyleAndShapeOnApply)
-
-            assertThat(onApply()).isNull()
-
-            toggleShouldShowAppLabels()?.invoke()
-
-            assertThat(onApply()).isNotNull()
-        }
-
-    @Test
     fun isThemeIconEnabled_shouldBeFalseByDefault() =
         testScope.runTest {
             val isThemeIconEnabled = collectLastValue(underTest.isThemedIconEnabled)
@@ -260,19 +245,6 @@ class AppIconPickerViewModelTest {
         }
 
     @Test
-    fun iconStyleAndShapeOnApply_shouldBeNonnull_whenShouldShowAppLabelsChanged() =
-        testScope.runTest {
-            val toggleShouldShowAppLabels = collectLastValue(underTest.toggleShouldShowAppLabels)
-            val onApply = collectLastValue(underTest.iconStyleAndShapeOnApply)
-
-            assertThat(onApply()).isNull()
-
-            toggleShouldShowAppLabels()?.invoke()
-
-            assertThat(onApply()).isNotNull()
-        }
-
-    @Test
     fun iconStyleAndShapeOnApply_completesOnSuccess() =
         testScope.runTest {
             val styleOptions = collectLastValue(underTest.styleOptions)
@@ -327,32 +299,6 @@ class AppIconPickerViewModelTest {
             runCurrent()
 
             assertThat(job.isActive).isFalse()
-        }
-
-    @Test
-    fun iconStyleAndShapeOnApply_completesOnSuccess_whenShouldShowAppLabelsChanged() =
-        testScope.runTest {
-            val initialShouldShowAppLabels =
-                collectLastValue(underTest.previewingShouldShowAppLabels)().also {
-                    assertThat(it).isNotNull()
-                }
-            val toggleShouldShowAppLabels = collectLastValue(underTest.toggleShouldShowAppLabels)
-            val onApply = collectLastValue(underTest.iconStyleAndShapeOnApply)
-            val previewingShouldShowAppLabels =
-                collectLastValue(underTest.previewingShouldShowAppLabels)
-            val repositoryShouldShowAppLabels =
-                collectLastValue(iconStyleRepository.shouldShowAppLabels)
-
-            // Toggle the value
-            toggleShouldShowAppLabels()?.invoke()
-            assertThat(previewingShouldShowAppLabels()).isNotEqualTo(initialShouldShowAppLabels)
-            assertThat(repositoryShouldShowAppLabels()).isEqualTo(initialShouldShowAppLabels)
-
-            // Apply the change
-            onApply()?.invoke()
-
-            // Verify the repository value is updated
-            assertThat(repositoryShouldShowAppLabels()).isEqualTo(previewingShouldShowAppLabels())
         }
 
     @Test
@@ -480,7 +426,6 @@ class AppIconPickerViewModelTest {
         }
 
     @Test
-    @DisableFlags(com.android.systemui.shared.Flags.FLAG_WORKSPACE_ITEMS_LABEL_HIDDEN)
     fun tabs_shapeAndStyleAvailable() =
         testScope.runTest {
             val tabs = collectLastValue(underTest.tabs)
@@ -492,20 +437,6 @@ class AppIconPickerViewModelTest {
         }
 
     @Test
-    @EnableFlags(com.android.systemui.shared.Flags.FLAG_WORKSPACE_ITEMS_LABEL_HIDDEN)
-    fun tabs_shapeAndStyleAvailableAndHideLabelFlagEnabled() =
-        testScope.runTest {
-            val tabs = collectLastValue(underTest.tabs)
-
-            val resultTabs = checkNotNull(tabs())
-            assertThat(resultTabs).hasSize(3)
-            assertThat(resultTabs[0].isSelected).isTrue()
-            assertThat(resultTabs[1].isSelected).isFalse()
-            assertThat(resultTabs[2].isSelected).isFalse()
-        }
-
-    @Test
-    @DisableFlags(com.android.systemui.shared.Flags.FLAG_WORKSPACE_ITEMS_LABEL_HIDDEN)
     fun tabs_styleNotAvailable() =
         testScope.runTest {
             val tabs = collectLastValue(underTest.tabs)
@@ -518,22 +449,6 @@ class AppIconPickerViewModelTest {
         }
 
     @Test
-    @EnableFlags(com.android.systemui.shared.Flags.FLAG_WORKSPACE_ITEMS_LABEL_HIDDEN)
-    fun tabs_styleNotAvailableAndHideLabelFlagEnabled() =
-        testScope.runTest {
-            val tabs = collectLastValue(underTest.tabs)
-            iconStyleRepository.setIsCustomizationAvailable(false)
-
-            val resultTabs = checkNotNull(tabs())
-            assertThat(resultTabs).hasSize(2)
-            assertThat(resultTabs[0].isSelected).isTrue()
-            assertThat(resultTabs[0].text).isEqualTo(appContext.getString(R.string.app_icons_shape))
-            assertThat(resultTabs[1].isSelected).isFalse()
-            assertThat(resultTabs[1].text).isEqualTo(appContext.getString(R.string.app_names))
-        }
-
-    @Test
-    @DisableFlags(com.android.systemui.shared.Flags.FLAG_WORKSPACE_ITEMS_LABEL_HIDDEN)
     fun tabs_shapeNotAvailable() =
         testScope.runTest {
             val tabs = collectLastValue(underTest.tabs)
@@ -543,21 +458,6 @@ class AppIconPickerViewModelTest {
             assertThat(resultTabs).hasSize(1)
             assertThat(resultTabs[0].isSelected).isTrue()
             assertThat(resultTabs[0].text).isEqualTo(appContext.getString(R.string.app_icons_style))
-        }
-
-    @Test
-    @EnableFlags(com.android.systemui.shared.Flags.FLAG_WORKSPACE_ITEMS_LABEL_HIDDEN)
-    fun tabs_shapeNotAvailableAndHideLabelFlagEnabled() =
-        testScope.runTest {
-            val tabs = collectLastValue(underTest.tabs)
-            shapeManager.setShapeOptions(emptyList())
-
-            val resultTabs = checkNotNull(tabs())
-            assertThat(resultTabs).hasSize(2)
-            assertThat(resultTabs[0].isSelected).isTrue()
-            assertThat(resultTabs[0].text).isEqualTo(appContext.getString(R.string.app_icons_style))
-            assertThat(resultTabs[1].isSelected).isFalse()
-            assertThat(resultTabs[1].text).isEqualTo(appContext.getString(R.string.app_names))
         }
 
     @Test
@@ -687,30 +587,6 @@ class AppIconPickerViewModelTest {
             shapeManager.setShapeOptions(emptyList())
             interactor.applyShape("")
             assertThat(isAvailable()).isEqualTo(false)
-        }
-
-    @Test
-    fun previewingShouldShowAppLabels_matchesRepositoryByDefault() =
-        testScope.runTest {
-            val repositoryShouldShowAppLabels =
-                collectLastValue(iconStyleRepository.shouldShowAppLabels).invoke()
-
-            val isEnabled = collectLastValue(underTest.previewingShouldShowAppLabels)
-
-            assertThat(isEnabled()).isEqualTo(repositoryShouldShowAppLabels)
-        }
-
-    @Test
-    fun toggleShouldShowAppLabels_togglesValue() =
-        testScope.runTest {
-            val isEnabled = collectLastValue(underTest.previewingShouldShowAppLabels)
-            val toggle = collectLastValue(underTest.toggleShouldShowAppLabels)
-
-            val initialValue = isEnabled()
-
-            toggle()?.invoke()
-
-            assertThat(isEnabled()).isNotEqualTo(initialValue)
         }
 
     private fun TestScope.assertShapeItem(

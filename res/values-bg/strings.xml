@@ -65,8 +65,6 @@
     <string name="app_icons_style_minimal" msgid="4905227469969513136">"Минималистичен"</string>
     <string name="app_icons_shape" msgid="2539949450435849188">"Форма"</string>
     <string name="app_labels" msgid="4290052401987798752">"Етикети на приложенията"</string>
-    <string name="app_names" msgid="708691253698583169">"Имена"</string>
-    <string name="show_app_names" msgid="522703901790555973">"Показв. на имената на приложенията"</string>
     <string name="app_icons_style" msgid="993356162262531521">"Стил"</string>
     <string name="apply_theme_btn" msgid="6293081192321303991">"Прилагане"</string>
     <string name="edit_custom_theme_lbl" msgid="5211377705710775224">"Докоснете, за да редактирате"</string>

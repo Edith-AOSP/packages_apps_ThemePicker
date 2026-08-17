@@ -366,23 +366,6 @@ constructor(
                                         }
                                 }
                             }
-
-                            launch {
-                                viewModel.appIconPickerViewModel.previewingShouldShowAppLabels
-                                    .collect {
-                                        safeSendMessage(
-                                            workspaceCallback,
-                                            MESSAGE_ID_UPDATE_COMMAND,
-                                            Bundle().apply {
-                                                putString(
-                                                    KEY_UPDATE_METHOD,
-                                                    METHOD_SET_WORKSPACE_ITEMS_LABEL_HIDDEN,
-                                                )
-                                                putBoolean(KEY_BOOLEAN_VALUE, !it)
-                                            },
-                                        )
-                                    }
-                            }
                         }
                     }
             }
@@ -420,8 +403,6 @@ constructor(
 
         const val MESSAGE_ID_UPDATE_COMMAND = 512
         const val KEY_UPDATE_METHOD = "update_method"
-        private const val METHOD_SET_WORKSPACE_ITEMS_LABEL_HIDDEN =
-            "/set_workspace_items_label_hidden"
 
         fun safeSendMessage(workspaceCallback: Message, what: Int, data: Bundle) {
             try {

@@ -65,8 +65,6 @@
     <string name="app_icons_style_minimal" msgid="4905227469969513136">"మినిమల్"</string>
     <string name="app_icons_shape" msgid="2539949450435849188">"షేప్"</string>
     <string name="app_labels" msgid="4290052401987798752">"యాప్ లేబుల్స్"</string>
-    <string name="app_names" msgid="708691253698583169">"పేర్లు"</string>
-    <string name="show_app_names" msgid="522703901790555973">"యాప్ పేర్లను చూడండి"</string>
     <string name="app_icons_style" msgid="993356162262531521">"స్టయిల్"</string>
     <string name="apply_theme_btn" msgid="6293081192321303991">"వర్తింపజేయి"</string>
     <string name="edit_custom_theme_lbl" msgid="5211377705710775224">"ఎడిట్ చేయడానికి నొక్కండి"</string>

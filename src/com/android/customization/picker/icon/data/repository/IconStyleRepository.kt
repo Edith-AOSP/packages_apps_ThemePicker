@@ -44,13 +44,4 @@ interface IconStyleRepository {
     suspend fun setIconStyle(iconStyle: IconStyle): Boolean
 
     suspend fun getIconStyleForLogging(): Int
-
-    /**
-     * The flow emits a boolean indicating the settings of if the home screen app labels are showing
-     * or hiding.
-     */
-    val shouldShowAppLabels: Flow<Boolean>
-
-    /** Apply the update to the system settings to show or hide the home screen app labels. */
-    suspend fun setShouldShowAppLabels(shouldShowAppLabels: Boolean)
 }

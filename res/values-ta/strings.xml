@@ -65,8 +65,6 @@
     <string name="app_icons_style_minimal" msgid="4905227469969513136">"மினிமல்"</string>
     <string name="app_icons_shape" msgid="2539949450435849188">"வடிவம்"</string>
     <string name="app_labels" msgid="4290052401987798752">"ஆப்ஸ் லேபிள்கள்"</string>
-    <string name="app_names" msgid="708691253698583169">"பெயர்கள்"</string>
-    <string name="show_app_names" msgid="522703901790555973">"ஆப்ஸ் பெயர்களைக் காட்டுதல்"</string>
     <string name="app_icons_style" msgid="993356162262531521">"ஸ்டைல்"</string>
     <string name="apply_theme_btn" msgid="6293081192321303991">"பயன்படுத்து"</string>
     <string name="edit_custom_theme_lbl" msgid="5211377705710775224">"\'தீமைத்\' திருத்த தட்டவும்"</string>

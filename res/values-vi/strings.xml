@@ -65,8 +65,6 @@
     <string name="app_icons_style_minimal" msgid="4905227469969513136">"Tối giản"</string>
     <string name="app_icons_shape" msgid="2539949450435849188">"Hình dạng"</string>
     <string name="app_labels" msgid="4290052401987798752">"Nhãn ứng dụng"</string>
-    <string name="app_names" msgid="708691253698583169">"Tên"</string>
-    <string name="show_app_names" msgid="522703901790555973">"Hiện tên ứng dụng"</string>
     <string name="app_icons_style" msgid="993356162262531521">"Kiểu"</string>
     <string name="apply_theme_btn" msgid="6293081192321303991">"Áp dụng"</string>
     <string name="edit_custom_theme_lbl" msgid="5211377705710775224">"Nhấn để chỉnh sửa"</string>

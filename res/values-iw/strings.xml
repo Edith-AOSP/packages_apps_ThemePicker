@@ -65,8 +65,6 @@
     <string name="app_icons_style_minimal" msgid="4905227469969513136">"מינימליסטי"</string>
     <string name="app_icons_shape" msgid="2539949450435849188">"צורה"</string>
     <string name="app_labels" msgid="4290052401987798752">"תוויות של אפליקציות"</string>
-    <string name="app_names" msgid="708691253698583169">"שמות"</string>
-    <string name="show_app_names" msgid="522703901790555973">"הצגת שמות האפליקציות"</string>
     <string name="app_icons_style" msgid="993356162262531521">"סגנון"</string>
     <string name="apply_theme_btn" msgid="6293081192321303991">"אישור"</string>
     <string name="edit_custom_theme_lbl" msgid="5211377705710775224">"יש ללחוץ כדי לערוך"</string>

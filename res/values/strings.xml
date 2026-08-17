@@ -171,12 +171,6 @@
     <!-- Title of a toggle to show or hide the app labels. Show when toggled on [CHAR LIMIT=35] -->
     <string name="app_labels">App labels</string>
 
-    <!-- Title of a tab to show or hide the app names on the home screen [CHAR LIMIT=15] -->
-    <string name="app_names">Names</string>
-
-    <!-- Title of a toggle to show or hide the app names on the home scree. Show when toggled on [CHAR LIMIT=35] -->
-    <string name="show_app_names">Show app names</string>
-
     <!-- Title of a tab to change the app icon theme [CHAR LIMIT=15] -->
     <string name="app_icons_style">Style</string>
 

@@ -146,37 +146,6 @@
                     android:theme="@style/Theme.Material3.DynamicColors.DayNight" />
             </androidx.constraintlayout.widget.ConstraintLayout>
         </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/app_icon_label_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:visibility="invisible"
-            android:paddingHorizontal="@dimen/floating_sheet_content_horizontal_padding"
-            android:orientation="horizontal">
-
-            <TextView
-                style="@style/CustomizationOptionEntryTitleTextStyle"
-                android:id="@+id/show_app_labels_title"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/show_app_names"
-                android:layout_marginEnd="@dimen/floating_sheet_clock_style_clock_size_text_margin_end"
-                android:importantForAccessibility="no" />
-
-            <com.google.android.material.materialswitch.MaterialSwitch
-                style="@style/SettingslibSwitchStyle.Expressive"
-                android:id="@+id/show_app_labels_switch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0"
-                android:contentDescription="@string/show_app_names"
-                android:clickable="true"
-                android:focusable="true"
-                android:theme="@style/Theme.Material3.DynamicColors.DayNight" />
-        </LinearLayout>
     </FrameLayout>
 
     <com.android.wallpaper.picker.customization.ui.view.FloatingToolbar

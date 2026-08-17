@@ -24,7 +24,6 @@ import com.android.customization.picker.icon.domain.interactor.AppIconInteractor
 import com.android.customization.picker.icon.shared.model.IconStyle
 import com.android.customization.picker.icon.shared.model.IconStyleModel
 import com.android.themepicker.R
-import com.android.wallpaper.config.BaseFlags
 import com.android.wallpaper.picker.common.icon.ui.viewmodel.Icon
 import com.android.wallpaper.picker.common.text.ui.viewmodel.Text
 import com.android.wallpaper.picker.customization.ui.viewmodel.FloatingToolbarTabViewModel
@@ -42,7 +41,6 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
@@ -143,27 +141,9 @@ constructor(
         }
     val isIconStyleAvailable = iconStylesModels.map { it.size > 1 }
 
-    //// App labels
-    private val overridingShouldShowAppLabels = MutableStateFlow<Boolean?>(null)
-    private val shouldShowAppLabels: SharedFlow<Boolean> =
-        interactor.shouldShowAppLabels.shareIn(
-            scope = viewModelScope,
-            started = SharingStarted.Lazily,
-            replay = 1,
-        )
-    val previewingShouldShowAppLabels: Flow<Boolean> =
-        combine(overridingShouldShowAppLabels, shouldShowAppLabels) {
-            overridingShowAppLabels,
-            showAppLabels ->
-            overridingShowAppLabels ?: showAppLabels
-        }
-    val toggleShouldShowAppLabels: Flow<() -> Unit> =
-        previewingShouldShowAppLabels.map { { overridingShouldShowAppLabels.value = !it } }
-
     enum class Tab {
         STYLE,
         SHAPE,
-        NAMES,
     }
 
     private val _selectedTab = MutableStateFlow<Tab?>(null)
@@ -181,9 +161,6 @@ constructor(
                     null
                 }
         }
-
-    private val isHideAppLabelsEnabled: Boolean =
-        BaseFlags.get(applicationContext).isHideAppLabelEnabled()
 
     val tabs: Flow<List<FloatingToolbarTabViewModel>> =
         combine(isIconStyleAvailable, isShapeOptionsAvailable, selectedTab) {
@@ -231,26 +208,6 @@ constructor(
                                     null
                                 } else {
                                     { _selectedTab.value = Tab.SHAPE }
-                                },
-                        )
-                    )
-                }
-                if (isHideAppLabelsEnabled) {
-                    val isSelected = (selectedTab == Tab.NAMES)
-                    add(
-                        FloatingToolbarTabViewModel(
-                            icon =
-                                Icon.Resource(
-                                    res = R.drawable.ic_app_names_filled_24px,
-                                    contentDescription = Text.Resource(R.string.app_names),
-                                ),
-                            text = Text.Resource(R.string.app_names).asString(applicationContext),
-                            isSelected = isSelected,
-                            onClick =
-                                if (isSelected) {
-                                    null
-                                } else {
-                                    { _selectedTab.value = Tab.NAMES }
                                 },
                         )
                     )
@@ -344,25 +301,18 @@ constructor(
             selectedShape,
             overridingIsThemedIconEnabled,
             isThemedIconEnabled,
-            overridingShouldShowAppLabels,
-            shouldShowAppLabels,
         ) { args: Array<Any?> ->
             val overridingShapeKey = args[0] as String?
             val selectedShape = args[1] as OptionItemViewModel2<ShapeIconViewModel>
             val overridingIsThemedIconEnabled = args[2] as Boolean?
             val currentIsThemedIconEnabled = args[3] as Boolean
-            val overridingShouldShowAppLabels = args[4] as Boolean?
-            val shouldShowAppLabels = args[5] as Boolean
 
             val shapeNeedsUpdate =
                 overridingShapeKey != null && overridingShapeKey != selectedShape.key.value
             val themedIconNeedsUpdate =
                 overridingIsThemedIconEnabled != null &&
                     overridingIsThemedIconEnabled != currentIsThemedIconEnabled
-            val shouldShowAppLabelsNeedsUpdate =
-                overridingShouldShowAppLabels != null &&
-                    overridingShouldShowAppLabels != shouldShowAppLabels
-            if (shapeNeedsUpdate || themedIconNeedsUpdate || shouldShowAppLabelsNeedsUpdate) {
+            if (shapeNeedsUpdate || themedIconNeedsUpdate) {
                 {
                     if (shapeNeedsUpdate) {
                         overridingShapeKey?.let {
@@ -383,12 +333,6 @@ constructor(
                             overridingIsThemedIconEnabled?.let { logger.logThemedIconApplied(it) }
                         }
                     }
-                    if (shouldShowAppLabelsNeedsUpdate) {
-                        overridingShouldShowAppLabels?.let {
-                            interactor.applyShouldShowAppLabels(it)
-                            // TODO(b/456634299): log apply should show app labels
-                        }
-                    }
                 }
             } else {
                 null
@@ -401,24 +345,17 @@ constructor(
             selectedShape,
             overridingIconStyle,
             selectedIconStyle,
-            overridingShouldShowAppLabels,
-            shouldShowAppLabels,
         ) { args: Array<Any?> ->
             val overridingShapeKey = args[0] as String?
             val selectedShape = args[1] as OptionItemViewModel2<ShapeIconViewModel>
             val overridingIconStyle = args[2] as IconStyle?
             val currentIconStyle = args[3] as IconStyle
-            val overridingShouldShowAppLabels = args[4] as Boolean?
-            val shouldShowAppLabels = args[5] as Boolean
 
             val shapeNeedsUpdate =
                 overridingShapeKey != null && overridingShapeKey != selectedShape.key.value
             val styleNeedsUpdate =
                 overridingIconStyle != null && overridingIconStyle != currentIconStyle
-            val showAppLabelsNeedsUpdate =
-                overridingShouldShowAppLabels != null &&
-                    overridingShouldShowAppLabels != shouldShowAppLabels
-            if (shapeNeedsUpdate || styleNeedsUpdate || showAppLabelsNeedsUpdate) {
+            if (shapeNeedsUpdate || styleNeedsUpdate) {
                 {
                     if (shapeNeedsUpdate) {
                         overridingShapeKey?.let {
@@ -456,11 +393,6 @@ constructor(
                             } catch (_: CancellationException) {}
                         }
                     }
-                    if (showAppLabelsNeedsUpdate) {
-                        overridingShouldShowAppLabels?.let {
-                            interactor.applyShouldShowAppLabels(it)
-                        }
-                    }
                 }
             } else {
                 null
@@ -470,14 +402,12 @@ constructor(
     fun resetPreview() {
         overridingShapeKey.value = null
         overridingIsThemedIconEnabled.value = null
-        overridingShouldShowAppLabels.value = null
         _selectedTab.value = Tab.STYLE
     }
 
     fun resetPreview2() {
         overridingShapeKey.value = null
         overridingIconStyle.value = null
-        overridingShouldShowAppLabels.value = null
         _selectedTab.value = Tab.STYLE
     }
 

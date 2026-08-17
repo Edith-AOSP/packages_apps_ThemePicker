@@ -111,7 +111,6 @@ object AppIconFloatingSheetBinder {
 
         val styleContent = view.requireViewById<View>(R.id.app_icon_style_container)
         val shapeContent = view.requireViewById<View>(R.id.app_shape_container)
-        val labelContent = view.requireViewById<View>(R.id.app_icon_label_container)
 
         val shapeOptionListAdapter =
             createShapeOptionItemAdapter(
@@ -146,19 +145,10 @@ object AppIconFloatingSheetBinder {
         val themedIconEntry = view.requireViewById<ViewGroup>(R.id.themed_icon_toggle_entry)
         val themedIconTitle = view.requireViewById<TextView>(R.id.themed_icon_toggle_title)
         val themedIconBetaLabel = view.requireViewById<TextView>(R.id.themed_icon_beta_title)
-        val showAppLabelsTitle = view.requireViewById<TextView>(R.id.show_app_labels_title)
-        val showAppLabelsSwitch = view.requireViewById<MaterialSwitch>(R.id.show_app_labels_switch)
-        ColorUpdateBinder.bind(
-            setColor = { color -> showAppLabelsTitle.setTextColor(color) },
-            color = colorUpdateViewModel.colorOnSurface,
-            shouldAnimate = isFloatingSheetActive,
-            lifecycleOwner = lifecycleOwner,
-        )
 
         data class FloatingSheetHeightsViewModel(
             val styleContentHeight: Int? = null,
             val shapeContentHeight: Int? = null,
-            val labelContentHeight: Int? = null,
         )
         val floatingSheetHeights: MutableStateFlow<FloatingSheetHeightsViewModel> =
             MutableStateFlow(FloatingSheetHeightsViewModel())
@@ -198,23 +188,6 @@ object AppIconFloatingSheetBinder {
                                     shapeContentHeight = shapeContent.height
                                 )
                             shapeContent.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                        }
-                    }
-                }
-            )
-
-            labelContent.viewTreeObserver.addOnGlobalLayoutListener(
-                object : OnGlobalLayoutListener {
-                    override fun onGlobalLayout() {
-                        if (
-                            labelContent.height != 0 &&
-                                floatingSheetHeights.value.labelContentHeight != labelContent.height
-                        ) {
-                            floatingSheetHeights.value =
-                                floatingSheetHeights.value.copy(
-                                    labelContentHeight = labelContent.height
-                                )
-                            labelContent.viewTreeObserver.removeOnGlobalLayoutListener(this)
                         }
                     }
                 }
@@ -278,11 +251,9 @@ object AppIconFloatingSheetBinder {
                         var currentTab: Tab? = null
                         combine(floatingSheetHeights, viewModel.selectedTab, ::Pair).collect {
                             (heights, selectedTab) ->
-                            val (styleContentHeight, shapeContentHeight, labelContentHeight) =
-                                heights
+                            val (styleContentHeight, shapeContentHeight) = heights
                             styleContentHeight ?: return@collect
                             shapeContentHeight ?: return@collect
-                            labelContentHeight ?: return@collect
                             selectedTab ?: return@collect
 
                             styleContent.isVisible = (currentTab == Tab.STYLE)
@@ -293,20 +264,17 @@ object AppIconFloatingSheetBinder {
                                 when (selectedTab) {
                                     Tab.STYLE -> styleContentHeight
                                     Tab.SHAPE -> shapeContentHeight
-                                    Tab.NAMES -> labelContentHeight
                                 } + 2 * verticalPadding
                             val currentContent: View? =
                                 when (currentTab) {
                                     Tab.STYLE -> styleContent
                                     Tab.SHAPE -> shapeContent
-                                    Tab.NAMES -> labelContent
                                     else -> null
                                 }
                             val selectedContent: View =
                                 when (selectedTab) {
                                     Tab.STYLE -> styleContent
                                     Tab.SHAPE -> shapeContent
-                                    Tab.NAMES -> labelContent
                                 }
                             FloatingSheetHeightAnimationBinder.bind(
                                 floatingSheetContainer,
@@ -316,28 +284,6 @@ object AppIconFloatingSheetBinder {
                                 selectedContent,
                             )
                             currentTab = selectedTab
-                        }
-                    }
-
-                    launch {
-                        var switchBinding: SwitchColorBinder.Binding? = null
-                        viewModel.previewingShouldShowAppLabels.collect {
-                            showAppLabelsSwitch.isChecked = it
-                            switchBinding?.destroy()
-                            switchBinding =
-                                SwitchColorBinder.bind(
-                                    switch = showAppLabelsSwitch,
-                                    isChecked = it,
-                                    colorUpdateViewModel = colorUpdateViewModel,
-                                    shouldAnimateColor = isFloatingSheetActive,
-                                    lifecycleOwner = lifecycleOwner,
-                                )
-                        }
-                    }
-
-                    launch {
-                        viewModel.toggleShouldShowAppLabels.collect {
-                            showAppLabelsSwitch.setOnCheckedChangeListener { _, _ -> it.invoke() }
                         }
                     }
                 } else {
