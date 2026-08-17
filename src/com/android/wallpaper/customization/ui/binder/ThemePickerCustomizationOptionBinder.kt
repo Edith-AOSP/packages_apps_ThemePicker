@@ -290,6 +290,15 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
             optionGridIcon = optionGrid.requireViewById(R.id.option_entry_icon)
         }
 
+        val optionIconPacks: View =
+            homeScreenCustomizationOptionEntries
+                .first { it.first == ThemePickerHomeCustomizationOption.ICON_PACKS }
+                .second
+        val optionIconPacksDescription: TextView? =
+            optionIconPacks.requireViewById(R.id.option_entry_description)
+        val optionIconPacksIcon: ImageView? =
+            optionIconPacks.requireViewById(R.id.option_entry_icon)
+
         val optionColorContrast: View =
             homeScreenCustomizationOptionEntries
                 .first { it.first == ThemePickerHomeCustomizationOption.COLOR_CONTRAST }
@@ -455,6 +464,26 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
                             optionGridDescription?.let { TextViewBinder.bind(it, gridOption.text) }
                             gridOption.payload?.let { optionGridIcon?.setImageDrawable(it) }
                         }
+                    }
+                }
+
+                launch {
+                    optionsViewModel.iconPackPickerViewModel.summary.collect { summary ->
+                        optionIconPacksDescription?.let {
+                            TextViewBinder.bind(it, summary)
+                        }
+                    }
+                }
+
+                launch {
+                    optionsViewModel.iconPackPickerViewModel.entryIcon.collect { icon ->
+                        optionIconPacksIcon?.setImageDrawable(icon)
+                    }
+                }
+
+                launch {
+                    optionsViewModel.onCustomizeIconPacksClicked.collect {
+                        optionIconPacks.setOnClickListener { _ -> it?.invoke() }
                     }
                 }
 
@@ -753,6 +782,18 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
                 Dispatchers.IO,
             )
         }
+
+        customizationOptionFloatingSheetViewMap
+            ?.get(ThemePickerHomeCustomizationOption.ICON_PACKS)
+            ?.let {
+                IconPackFloatingSheetBinder.bind(
+                    it,
+                    optionsViewModel,
+                    colorUpdateViewModel,
+                    lifecycleOwner,
+                    Dispatchers.IO,
+                )
+            }
     }
 
     // Track the current show clock flag. If it turns from false to true, animate fade-in.
