@@ -1,9 +1,9 @@
 package com.android.wallpaper.customization.ui.viewmodel
 
 import android.content.Context
+import android.graphics.drawable.Drawable
 import com.android.customization.picker.iconpack.IconPackInfo
 import com.android.customization.picker.iconpack.domain.interactor.IconPackInteractor
-import com.android.themepicker.R
 import com.android.wallpaper.picker.common.text.ui.viewmodel.Text
 import com.android.wallpaper.picker.option.ui.viewmodel.OptionItemViewModel2
 import dagger.assisted.Assisted
@@ -78,28 +78,34 @@ constructor(
             } else null
         }
 
-    val summary: Flow<Text> =
+    /** Icon of the currently previewing icon pack, used for the Icons home entry. */
+    val entryIcon: Flow<Drawable?> =
         previewingIconPack.map { pkg ->
-            val name = if (pkg.isNullOrEmpty()) {
-                appContext.getString(R.string.icon_pack_system_default)
+            val defaultIcon = appContext.packageManager.getApplicationIcon(appContext.packageName)
+            if (pkg.isNullOrEmpty()) {
+                defaultIcon
+            } else {
+                interactor.installedIconPacks.firstOrNull { it.packageName == pkg }?.icon
+                    ?: defaultIcon
+            }
+        }
+
+    /** Display name of the currently previewing icon pack, used for the Icons home entry. */
+    val previewingPackName: Flow<String> =
+        previewingIconPack.map { pkg ->
+            if (pkg.isNullOrEmpty()) {
+                SYSTEM_ICONS_NAME
             } else {
                 interactor.installedIconPacks
                     .firstOrNull { it.packageName == pkg }?.name ?: pkg
-            }
-            Text.Loaded(name)
-        }
-
-    val entryIcon: Flow<android.graphics.drawable.Drawable?> =
-        previewingIconPack.map { pkg ->
-            if (pkg.isNullOrEmpty()) {
-                appContext.packageManager.getApplicationIcon(appContext.packageName)
-            } else {
-                interactor.installedIconPacks
-                    .firstOrNull { it.packageName == pkg }?.icon
             }
         }
 
     fun resetPreview() {
         _overridingIconPack.value = null
+    }
+
+    companion object {
+        private const val SYSTEM_ICONS_NAME = "System Icons"
     }
 }

@@ -31,7 +31,6 @@ import com.android.wallpaper.customization.ui.util.ThemePickerCustomizationOptio
 import com.android.wallpaper.customization.ui.util.ThemePickerCustomizationOptionUtil.ThemePickerHomeCustomizationOption.APP_ICONS
 import com.android.wallpaper.customization.ui.util.ThemePickerCustomizationOptionUtil.ThemePickerHomeCustomizationOption.COLORS
 import com.android.wallpaper.customization.ui.util.ThemePickerCustomizationOptionUtil.ThemePickerHomeCustomizationOption.GRID
-import com.android.wallpaper.customization.ui.util.ThemePickerCustomizationOptionUtil.ThemePickerHomeCustomizationOption.ICON_PACKS
 import com.android.wallpaper.customization.ui.util.ThemePickerCustomizationOptionUtil.ThemePickerLockCustomizationOption.CLOCK
 import com.android.wallpaper.customization.ui.util.ThemePickerCustomizationOptionUtil.ThemePickerLockCustomizationOption.SHORTCUTS
 import com.android.wallpaper.picker.common.preview.ui.viewmodel.WorkspacePreviewScreen
@@ -269,15 +268,6 @@ constructor(
                 null
             }
         }
-
-    val onCustomizeIconPacksClicked: Flow<(() -> Unit)?> =
-        selectedOption.map {
-            if (it == null) {
-                { defaultCustomizationOptionsViewModel.selectOption(ICON_PACKS) }
-            } else {
-                null
-            }
-        }
     private val isApplyInProgress: MutableStateFlow<Boolean> = MutableStateFlow(false)
     @OptIn(ExperimentalCoroutinesApi::class)
     val onApplyButtonClicked: Flow<((onComplete: () -> Unit) -> Unit)?> =
@@ -287,12 +277,35 @@ constructor(
                     CLOCK -> clockPickerViewModel.onApply
                     SHORTCUTS -> keyguardQuickAffordancePickerViewModel2.onApply
                     GRID -> gridPickerViewModel.onApply
-                    ICON_PACKS -> iconPackPickerViewModel.onApply
                     APP_ICONS ->
                         if (BaseFlags.get(appContext).isExtendibleThemeManager()) {
-                            appIconPickerViewModel.iconStyleAndShapeOnApply
+                            combine(
+                                appIconPickerViewModel.iconStyleAndShapeOnApply,
+                                iconPackPickerViewModel.onApply,
+                            ) { iconOnApply, iconPackOnApply ->
+                                if (iconOnApply == null && iconPackOnApply == null) {
+                                    null
+                                } else {
+                                    {
+                                        iconOnApply?.invoke()
+                                        iconPackOnApply?.invoke()
+                                    }
+                                }
+                            }
                         } else {
-                            appIconPickerViewModel.shapeAndThemedIconOnApply
+                            combine(
+                                appIconPickerViewModel.shapeAndThemedIconOnApply,
+                                iconPackPickerViewModel.onApply,
+                            ) { iconOnApply, iconPackOnApply ->
+                                if (iconOnApply == null && iconPackOnApply == null) {
+                                    null
+                                } else {
+                                    {
+                                        iconOnApply?.invoke()
+                                        iconPackOnApply?.invoke()
+                                    }
+                                }
+                            }
                         }
                     COLORS ->
                         combine(colorPickerViewModel2.onApply, darkModeViewModel.onApply) {

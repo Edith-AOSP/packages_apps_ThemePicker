@@ -431,9 +431,12 @@ class AppIconPickerViewModelTest {
             val tabs = collectLastValue(underTest.tabs)
 
             val resultTabs = checkNotNull(tabs())
-            assertThat(resultTabs).hasSize(2)
+            assertThat(resultTabs).hasSize(3)
             assertThat(resultTabs[0].isSelected).isTrue()
             assertThat(resultTabs[1].isSelected).isFalse()
+            assertThat(resultTabs[2].isSelected).isFalse()
+            assertThat(resultTabs[2].text)
+                .isEqualTo(appContext.getString(R.string.app_icons_pack))
         }
 
     @Test
@@ -443,9 +446,10 @@ class AppIconPickerViewModelTest {
             iconStyleRepository.setIsCustomizationAvailable(false)
 
             val resultTabs = checkNotNull(tabs())
-            assertThat(resultTabs).hasSize(1)
+            assertThat(resultTabs).hasSize(2)
             assertThat(resultTabs[0].isSelected).isTrue()
             assertThat(resultTabs[0].text).isEqualTo(appContext.getString(R.string.app_icons_shape))
+            assertThat(resultTabs[1].text).isEqualTo(appContext.getString(R.string.app_icons_pack))
         }
 
     @Test
@@ -455,9 +459,10 @@ class AppIconPickerViewModelTest {
             shapeManager.setShapeOptions(emptyList())
 
             val resultTabs = checkNotNull(tabs())
-            assertThat(resultTabs).hasSize(1)
+            assertThat(resultTabs).hasSize(2)
             assertThat(resultTabs[0].isSelected).isTrue()
             assertThat(resultTabs[0].text).isEqualTo(appContext.getString(R.string.app_icons_style))
+            assertThat(resultTabs[1].text).isEqualTo(appContext.getString(R.string.app_icons_pack))
         }
 
     @Test

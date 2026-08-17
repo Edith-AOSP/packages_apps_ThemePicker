@@ -144,6 +144,7 @@ constructor(
     enum class Tab {
         STYLE,
         SHAPE,
+        PACKS,
     }
 
     private val _selectedTab = MutableStateFlow<Tab?>(null)
@@ -158,7 +159,7 @@ constructor(
                 } else if (isShapeOptionsAvailable) {
                     Tab.SHAPE
                 } else {
-                    null
+                    Tab.PACKS
                 }
         }
 
@@ -212,6 +213,25 @@ constructor(
                         )
                     )
                 }
+                val isPacksSelected = (selectedTab == Tab.PACKS)
+                add(
+                    FloatingToolbarTabViewModel(
+                        icon =
+                            Icon.Resource(
+                                res = R.drawable.ic_icon_packs_24px,
+                                contentDescription = Text.Resource(R.string.app_icons_pack),
+                            ),
+                        text =
+                            Text.Resource(R.string.app_icons_pack).asString(applicationContext),
+                        isSelected = isPacksSelected,
+                        onClick =
+                            if (isPacksSelected) {
+                                null
+                            } else {
+                                { _selectedTab.value = Tab.PACKS }
+                            },
+                    )
+                )
             }
         }
 

@@ -36,6 +36,7 @@ import com.android.customization.picker.icon.shared.model.IconStyleModel
 import com.android.customization.picker.icon.ui.util.IconStyleViewUtil
 import com.android.customization.picker.icon.ui.viewmodel.AppIconPickerViewModel.Tab
 import com.android.customization.picker.icon.ui.viewmodel.ShapeIconViewModel
+import com.android.customization.picker.iconpack.IconPackInfo
 import com.android.themepicker.R
 import com.android.wallpaper.config.BaseFlags
 import com.android.wallpaper.customization.ui.binder.FloatingSheetHeightAnimationBinder
@@ -111,6 +112,7 @@ object AppIconFloatingSheetBinder {
 
         val styleContent = view.requireViewById<View>(R.id.app_icon_style_container)
         val shapeContent = view.requireViewById<View>(R.id.app_shape_container)
+        val packContent = view.requireViewById<View>(R.id.app_icon_pack_container)
 
         val shapeOptionListAdapter =
             createShapeOptionItemAdapter(
@@ -137,6 +139,18 @@ object AppIconFloatingSheetBinder {
                 it.initOptionList(view.context, styleOptionListAdapter)
             }
 
+        val packOptionListAdapter =
+            createPackOptionItemAdapter(
+                colorUpdateViewModel = colorUpdateViewModel,
+                shouldAnimateColor = isFloatingSheetActive,
+                lifecycleOwner = lifecycleOwner,
+                backgroundDispatcher = backgroundDispatcher,
+            )
+        val packOptionList =
+            view.requireViewById<RecyclerView>(R.id.icon_pack_options).also {
+                it.initOptionList(view.context, packOptionListAdapter)
+            }
+
         val styleOption = styleContent.findViewById<View>(R.id.icon_style_option_placeholder)
         val styleIcon = styleOption.findViewById<View>(R.id.option_icon)
         val styleIconHeight: MutableStateFlow<Int?> = MutableStateFlow(null)
@@ -149,6 +163,7 @@ object AppIconFloatingSheetBinder {
         data class FloatingSheetHeightsViewModel(
             val styleContentHeight: Int? = null,
             val shapeContentHeight: Int? = null,
+            val packContentHeight: Int? = null,
         )
         val floatingSheetHeights: MutableStateFlow<FloatingSheetHeightsViewModel> =
             MutableStateFlow(FloatingSheetHeightsViewModel())
@@ -192,6 +207,23 @@ object AppIconFloatingSheetBinder {
                     }
                 }
             )
+
+            packContent.viewTreeObserver.addOnGlobalLayoutListener(
+                object : OnGlobalLayoutListener {
+                    override fun onGlobalLayout() {
+                        if (
+                            packContent.height != 0 &&
+                                floatingSheetHeights.value.packContentHeight != packContent.height
+                        ) {
+                            floatingSheetHeights.value =
+                                floatingSheetHeights.value.copy(
+                                    packContentHeight = packContent.height
+                                )
+                            packContent.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                        }
+                    }
+                }
+            )
         }
 
         lifecycleOwner.lifecycleScope.launch {
@@ -202,6 +234,18 @@ object AppIconFloatingSheetBinder {
                             val indexToFocus =
                                 options.indexOfFirst { it.isSelected.value }.coerceAtLeast(0)
                             (shapeOptionList.layoutManager as LinearLayoutManager).scrollToPosition(
+                                indexToFocus
+                            )
+                        }
+                    }
+                }
+
+                launch {
+                    optionsViewModel.iconPackPickerViewModel.packOptions.collect { options ->
+                        packOptionListAdapter.setItems(options) {
+                            val indexToFocus =
+                                options.indexOfFirst { it.isSelected.value }.coerceAtLeast(0)
+                            (packOptionList.layoutManager as LinearLayoutManager).scrollToPosition(
                                 indexToFocus
                             )
                         }
@@ -251,30 +295,36 @@ object AppIconFloatingSheetBinder {
                         var currentTab: Tab? = null
                         combine(floatingSheetHeights, viewModel.selectedTab, ::Pair).collect {
                             (heights, selectedTab) ->
-                            val (styleContentHeight, shapeContentHeight) = heights
+                            val (styleContentHeight, shapeContentHeight, packContentHeight) =
+                                heights
                             styleContentHeight ?: return@collect
                             shapeContentHeight ?: return@collect
+                            packContentHeight ?: return@collect
                             selectedTab ?: return@collect
 
                             styleContent.isVisible = (currentTab == Tab.STYLE)
                             shapeContent.isVisible = (currentTab == Tab.SHAPE)
+                            packContent.isVisible = (currentTab == Tab.PACKS)
 
                             val fromHeight = floatingSheetContainer.height
                             val toHeight =
                                 when (selectedTab) {
                                     Tab.STYLE -> styleContentHeight
                                     Tab.SHAPE -> shapeContentHeight
+                                    Tab.PACKS -> packContentHeight
                                 } + 2 * verticalPadding
                             val currentContent: View? =
                                 when (currentTab) {
                                     Tab.STYLE -> styleContent
                                     Tab.SHAPE -> shapeContent
+                                    Tab.PACKS -> packContent
                                     else -> null
                                 }
                             val selectedContent: View =
                                 when (selectedTab) {
                                     Tab.STYLE -> styleContent
                                     Tab.SHAPE -> shapeContent
+                                    Tab.PACKS -> packContent
                                 }
                             FloatingSheetHeightAnimationBinder.bind(
                                 floatingSheetContainer,
@@ -417,6 +467,25 @@ object AppIconFloatingSheetBinder {
             bindPayload = { view: View, shapeIcon: ShapeIconViewModel ->
                 val imageView = view.findViewById(R.id.foreground) as? ImageView
                 imageView?.let { ShapeIconViewBinder.bind(imageView, shapeIcon) }
+                return@OptionItemAdapter2 null
+            },
+            colorUpdateViewModel = WeakReference(colorUpdateViewModel),
+            shouldAnimateColor = shouldAnimateColor,
+        )
+
+    private fun createPackOptionItemAdapter(
+        colorUpdateViewModel: ColorUpdateViewModel,
+        shouldAnimateColor: () -> Boolean,
+        lifecycleOwner: LifecycleOwner,
+        backgroundDispatcher: CoroutineDispatcher,
+    ): OptionItemAdapter2<IconPackInfo> =
+        OptionItemAdapter2(
+            layoutResourceId = R.layout.icon_pack_option,
+            lifecycleOwner = lifecycleOwner,
+            backgroundDispatcher = backgroundDispatcher,
+            bindPayload = { view: View, pack: IconPackInfo ->
+                val imageView = view.findViewById(R.id.icon_pack_icon) as? ImageView
+                imageView?.setImageDrawable(pack.icon)
                 return@OptionItemAdapter2 null
             },
             colorUpdateViewModel = WeakReference(colorUpdateViewModel),

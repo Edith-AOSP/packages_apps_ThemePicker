@@ -21,10 +21,17 @@
             android:importantForAccessibility="no" />
 
         <ImageView
+            android:id="@+id/icon_pack_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"/>
+
+        <ImageView
             android:id="@id/foreground"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="center"/>
+
     </FrameLayout>
 
     <View

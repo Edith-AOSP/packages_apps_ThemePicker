@@ -20,7 +20,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.drawable.AdaptiveIconDrawable
 import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
@@ -49,7 +48,6 @@ import com.android.customization.picker.color.ui.view.ColorOptionIconView
 import com.android.customization.picker.color.ui.viewmodel.ColorOptionIconViewModel
 import com.android.customization.picker.grid.ui.binder.GridFloatingSheetBinder
 import com.android.customization.picker.icon.ui.binder.AppIconFloatingSheetBinder
-import com.android.customization.picker.icon.ui.binder.ShapeIconViewBinder
 import com.android.customization.picker.icon.ui.util.IconStyleViewUtil
 import com.android.customization.picker.quickaffordance.ui.binder.ShortcutFloatingSheetBinder
 import com.android.customization.picker.quickaffordance.ui.compose.ShortcutsFloatingSheet
@@ -63,6 +61,7 @@ import com.android.wallpaper.customization.ui.viewmodel.ThemePickerCustomization
 import com.android.wallpaper.customization.ui.viewmodel.ThemePickerCustomizationOptionsViewModel
 import com.android.wallpaper.picker.common.icon.ui.viewbinder.IconViewBinder
 import com.android.wallpaper.picker.common.text.ui.viewbinder.TextViewBinder
+import com.android.wallpaper.picker.common.text.ui.viewmodel.Text
 import com.android.wallpaper.picker.customization.ui.binder.ColorUpdateBinder
 import com.android.wallpaper.picker.customization.ui.binder.CustomizationOptionsBinder
 import com.android.wallpaper.picker.customization.ui.binder.DefaultCustomizationOptionsBinder
@@ -80,11 +79,11 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.DisposableHandle
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -290,15 +289,6 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
             optionGridIcon = optionGrid.requireViewById(R.id.option_entry_icon)
         }
 
-        val optionIconPacks: View =
-            homeScreenCustomizationOptionEntries
-                .first { it.first == ThemePickerHomeCustomizationOption.ICON_PACKS }
-                .second
-        val optionIconPacksDescription: TextView? =
-            optionIconPacks.requireViewById(R.id.option_entry_description)
-        val optionIconPacksIcon: ImageView? =
-            optionIconPacks.requireViewById(R.id.option_entry_icon)
-
         val optionColorContrast: View =
             homeScreenCustomizationOptionEntries
                 .first { it.first == ThemePickerHomeCustomizationOption.COLOR_CONTRAST }
@@ -389,64 +379,38 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
                     }
 
                     launch {
-                        var disposableHandle: DisposableHandle? = null
-                        if (BaseFlags.get(view.context).isExtendibleThemeManager()) {
-                            optionsViewModel.appIconPickerViewModel.iconStyleAndShapeSummary
-                                .collect { summary ->
-                                    disposableHandle?.dispose()
-                                    optionAppIcons?.let { view ->
-                                        disposableHandle =
-                                            iconStyleViewUtil.bindShapeIconPreview(
-                                                view = view,
-                                                iconStyleModel = summary.iconStyleModel,
-                                                shapeIcon = summary.iconShape,
-                                                colorUpdateViewModel = colorUpdateViewModel,
-                                                shouldAnimateColor = isOnMainScreen,
-                                                lifecycleOwner = lifecycleOwner,
-                                            )
-                                    }
-                                    optionAppIconsDescription?.let {
-                                        TextViewBinder.bind(
-                                            view = it,
-                                            viewModel = summary.description,
-                                        )
-                                    }
-                                }
-                        } else {
-                            val previewIconPackageName =
-                                view.context.resources.getString(R.string.camera_package)
-                            val appIconDrawable =
-                                ShapeIconViewBinder.loadAppIcon(
-                                    view.context,
-                                    previewIconPackageName,
-                                )
-                            optionsViewModel.appIconPickerViewModel.shapeAndThemedIconSummary
-                                .collect { summary ->
-                                    disposableHandle?.dispose()
-                                    summary.iconShape?.let {
-                                        disposableHandle =
-                                            optionAppIconsIcon?.let { it1 ->
-                                                ShapeIconViewBinder
-                                                    .bindShapeAndThemedIconPreviewIcon(
-                                                        view = it1,
-                                                        appIconDrawable =
-                                                            appIconDrawable
-                                                                as? AdaptiveIconDrawable,
-                                                        shapeIcon = summary.iconShape,
-                                                        isThemed = summary.isThemed,
-                                                        colorUpdateViewModel = colorUpdateViewModel,
-                                                        shouldAnimateColor = isOnMainScreen,
-                                                        lifecycleOwner = lifecycleOwner,
-                                                    )
+                        val summaryFlow =
+                            if (BaseFlags.get(view.context).isExtendibleThemeManager()) {
+                                optionsViewModel.appIconPickerViewModel.iconStyleAndShapeSummary
+                                    .map { it.description }
+                            } else {
+                                optionsViewModel.appIconPickerViewModel.shapeAndThemedIconSummary
+                                    .map { it.description }
+                            }
+                        combine(
+                            summaryFlow,
+                            optionsViewModel.iconPackPickerViewModel.previewingPackName,
+                        ) { description, packName ->
+                            optionAppIconsDescription?.let {
+                                val text = (description as? Text.Loaded)?.text
+                                TextViewBinder.bind(
+                                    view = it,
+                                    viewModel =
+                                        Text.Loaded(
+                                            if (text.isNullOrEmpty()) {
+                                                packName
+                                            } else {
+                                                "$text, $packName"
                                             }
-                                    }
-                                    optionAppIconsDescription?.let {
-                                        TextViewBinder.bind(
-                                            view = it,
-                                            viewModel = summary.description,
-                                        )
-                                    }
-                                }
+                                        ),
+                                )
+                            }
+                        }.collect {}
+                    }
+
+                    launch {
+                        optionsViewModel.iconPackPickerViewModel.entryIcon.collect { icon ->
+                            optionAppIconsIcon?.setImageDrawable(icon)
                         }
                     }
                 }
@@ -464,26 +428,6 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
                             optionGridDescription?.let { TextViewBinder.bind(it, gridOption.text) }
                             gridOption.payload?.let { optionGridIcon?.setImageDrawable(it) }
                         }
-                    }
-                }
-
-                launch {
-                    optionsViewModel.iconPackPickerViewModel.summary.collect { summary ->
-                        optionIconPacksDescription?.let {
-                            TextViewBinder.bind(it, summary)
-                        }
-                    }
-                }
-
-                launch {
-                    optionsViewModel.iconPackPickerViewModel.entryIcon.collect { icon ->
-                        optionIconPacksIcon?.setImageDrawable(icon)
-                    }
-                }
-
-                launch {
-                    optionsViewModel.onCustomizeIconPacksClicked.collect {
-                        optionIconPacks.setOnClickListener { _ -> it?.invoke() }
                     }
                 }
 
@@ -782,18 +726,6 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
                 Dispatchers.IO,
             )
         }
-
-        customizationOptionFloatingSheetViewMap
-            ?.get(ThemePickerHomeCustomizationOption.ICON_PACKS)
-            ?.let {
-                IconPackFloatingSheetBinder.bind(
-                    it,
-                    optionsViewModel,
-                    colorUpdateViewModel,
-                    lifecycleOwner,
-                    Dispatchers.IO,
-                )
-            }
     }
 
     // Track the current show clock flag. If it turns from false to true, animate fade-in.
