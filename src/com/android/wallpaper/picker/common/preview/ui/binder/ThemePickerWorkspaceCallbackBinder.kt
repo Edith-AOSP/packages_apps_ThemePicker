@@ -372,11 +372,17 @@ constructor(
         }
     }
 
-    override fun unbind() {
-        lockScreenJob?.cancel()
-        lockScreenJob = null
-        homeScreenJob?.cancel()
-        homeScreenJob = null
+    override fun unbind(screen: Screen) {
+        when (screen) {
+            Screen.LOCK_SCREEN -> {
+                lockScreenJob?.cancel()
+                lockScreenJob = null
+            }
+            Screen.HOME_SCREEN -> {
+                homeScreenJob?.cancel()
+                homeScreenJob = null
+            }
+        }
     }
 
     data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
