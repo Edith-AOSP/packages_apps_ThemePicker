@@ -13,11 +13,13 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.runBlocking
 
 class IconPackPickerViewModel
@@ -48,21 +50,36 @@ constructor(
         }
 
     val packOptions: Flow<List<OptionItemViewModel2<IconPackInfo>>> =
-        combine(previewingIconPack, flowOf(interactor.installedIconPacks)) { previewingPkg, packs ->
+        flowOf(interactor.installedIconPacks).map { packs ->
             packs.map { pack ->
-                val isPreviewed = pack.packageName == previewingPkg
+                // Derive `isSelected` as a persistent flow (like the shape/style options) rather
+                // than a one-shot value captured at list-build time. Rebuilding the list with a
+                // fresh `MutableStateFlow` on every `previewingIconPack` emission replaces the
+                // view-model the adapter's binder is still collecting, so a tap would never emit a
+                // change on the bound flow and the selection (spring + shape/color morph)
+                // animation would not play. A persistent flow emits the change in-place, which is
+                // what `OptionItemBinder2` relies on to trigger `animatedSelection`.
+                val isSelected =
+                    previewingIconPack
+                        .map { it == pack.packageName }
+                        .stateIn(
+                            scope = viewModelScope,
+                            started = SharingStarted.Lazily,
+                            initialValue = false,
+                        )
                 OptionItemViewModel2(
                     key = MutableStateFlow(pack.packageName.ifEmpty { "system" }),
                     payload = pack,
                     text = Text.Loaded(pack.name),
-                    isSelected = MutableStateFlow(isPreviewed),
-                    onClicked = if (isPreviewed) {
-                        MutableStateFlow(null)
-                    } else {
-                        MutableStateFlow({
-                            _overridingIconPack.value = pack.packageName
-                        } as (() -> Unit)?)
-                    },
+                    isSelected = isSelected,
+                    onClicked =
+                        isSelected.map { selected ->
+                            if (selected) {
+                                null
+                            } else {
+                                { _overridingIconPack.value = pack.packageName } as (() -> Unit)?
+                            }
+                        },
                 )
             }
         }
