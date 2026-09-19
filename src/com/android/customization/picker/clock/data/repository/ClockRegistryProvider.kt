@@ -76,6 +76,7 @@ class ClockRegistryProvider(
                 "com.android.systemui.clocks.numoverlap",
                 "com.android.systemui.clocks.weather",
                 "com.android.systemui.clocks.edithclockfraunces",
+                "com.android.systemui.clocks.edithclockliterata",
             ),
             PluginEnabler.AlwaysEnabled(),
             Executors.newSingleThreadExecutor(),
