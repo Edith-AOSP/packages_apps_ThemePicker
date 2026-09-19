@@ -263,16 +263,19 @@ constructor(
             if (groups.isNullOrEmpty()) {
                 null
             } else {
-                val group = groups[previewingClockPresetGroupIndex]
+                val groupIndex =
+                    previewingClockPresetGroupIndex.coerceIn(0, groups.size - 1)
+                val group = groups[groupIndex]
                 ClockAxisPresetSliderViewModel(
                     valueFrom = 0F,
                     valueTo = (group.presets.size - 1).toFloat(),
                     stepSize = 1F,
                     onSliderStopTrackingTouch = { value ->
-                        val presetIndex = value.roundToInt()
+                        val presetIndex =
+                            value.roundToInt().coerceIn(0, group.presets.size - 1)
                         overridingClockPresetIndexedStyle.value =
                             IndexedStyle(
-                                groupIndex = previewingClockPresetGroupIndex,
+                                groupIndex = groupIndex,
                                 presetIndex = presetIndex,
                                 style = group.presets[presetIndex],
                             )
@@ -281,7 +284,16 @@ constructor(
             }
         }
     val axisPresetsSliderSelectedValue: Flow<Float> =
-        previewingClockPresetIndexedStyle.map { it?.presetIndex?.toFloat() }.filterNotNull()
+        combine(groups, previewingClockPresetIndexedStyle) { groups, indexedStyle ->
+            if (groups.isNullOrEmpty() || indexedStyle == null) {
+                null
+            } else {
+                val groupIndex = indexedStyle.groupIndex.coerceIn(0, groups.size - 1)
+                indexedStyle.presetIndex
+                    .coerceIn(0, groups[groupIndex].presets.size - 1)
+                    .toFloat()
+            }
+        }.filterNotNull()
 
     private val _showClockFacePresetGroupIndexUpdateToast: MutableStateFlow<Int?> =
         MutableStateFlow(null)
@@ -298,11 +310,14 @@ constructor(
                 if (groupCount == 1) {
                     null
                 } else {
-                    val currentGroupIndex = previewingIndexedStyle?.groupIndex ?: 0
+                    val currentGroupIndex =
+                        (previewingIndexedStyle?.groupIndex ?: 0).coerceIn(0, groupCount - 1)
                     val nextGroupIndex = (currentGroupIndex + 1) % groupCount
-                    val nextPresetIndex = previewingIndexedStyle?.presetIndex ?: (groupCount / 2)
                     val nextGroup = groups[nextGroupIndex]
-                    {
+                    val nextPresetIndex =
+                        (previewingIndexedStyle?.presetIndex ?: (groupCount / 2))
+                            .coerceIn(0, nextGroup.presets.size - 1)
+                    ({
                         overridingClockPresetIndexedStyle.value =
                             IndexedStyle(
                                 groupIndex = nextGroupIndex,
@@ -310,7 +325,7 @@ constructor(
                                 style = nextGroup.presets[nextPresetIndex],
                             )
                         _showClockFacePresetGroupIndexUpdateToast.value = nextGroupIndex
-                    }
+                    })
                 }
             }
         }
