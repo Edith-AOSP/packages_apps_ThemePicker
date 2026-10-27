@@ -428,6 +428,7 @@ constructor(
     fun resetPreview2() {
         overridingShapeKey.value = null
         overridingIconStyle.value = null
+        overridingIsThemedIconEnabled.value = null
         _selectedTab.value = Tab.STYLE
     }
 

@@ -215,18 +215,7 @@ fun ColorVariantPicker(
 
                     Text(
                         modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = animatedAlpha },
-                        text =
-                            when (option.style) {
-                                ThemeStyle.SPRITZ ->
-                                    stringResource(R.string.color_variant_option_label_neutral)
-                                ThemeStyle.TONAL_SPOT ->
-                                    stringResource(R.string.color_variant_option_label_soft)
-                                ThemeStyle.VIBRANT ->
-                                    stringResource(R.string.color_variant_option_label_bright)
-                                ThemeStyle.EXPRESSIVE ->
-                                    stringResource(R.string.color_variant_option_label_bold)
-                                else -> option.toString()
-                            },
+                        text = stringResource(styleLabelRes(option.style)),
                         style =
                             if (isSelected) {
                                 MaterialTheme.typography.labelSmallEmphasized

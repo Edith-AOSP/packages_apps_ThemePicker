@@ -198,6 +198,11 @@ constructor(
         _tempOverridingStyle.value = null
     }
 
+    fun selectStyle(@ThemeStyle.Type style: Int) {
+        _overridingStyle.value = style
+        _tempOverridingStyle.value = null
+    }
+
     fun resetStyleOptionSelection() {
         _overridingStyle.value = null
         _tempOverridingStyle.value = null
@@ -207,24 +212,27 @@ constructor(
         interactor.colorOptions.map { colorOptions ->
             colorOptions.map { colorTypeToOptions ->
                 colorTypeToOptions.first to
-                    colorTypeToOptions.second.mapIndexed { index, colorOption ->
-                        colorOption as ColorOptionImpl
-                        ColorOptionViewModel(
-                            icon = ColorOptionIconViewModel.fromColorOption(colorOption),
-                            key = colorOption.getKey(),
-                            onClick = {
-                                viewModelScope.launch {
-                                    _overridingColorOption.value = colorOption
-                                    // Reset overriding style when a new option
-                                    // is selected.
-                                    resetStyleOptionSelection()
-                                }
-                            },
-                            text =
-                                Text.Loaded(colorOption.getContentDescription(context).toString()),
-                            enableDrillDown = styleOptions.contains(colorOption.style),
-                        )
-                    }
+                    colorTypeToOptions.second
+                        .map { colorOption ->
+                            colorOption as ColorOptionImpl
+                            ColorOptionViewModel(
+                                icon = ColorOptionIconViewModel.fromColorOption(colorOption),
+                                key = colorOption.getKey(),
+                                onClick = {
+                                    viewModelScope.launch {
+                                        _overridingColorOption.value = colorOption
+                                        // An explicitly chosen style survives seed changes.
+                                    }
+                                },
+                                text =
+                                    Text.Loaded(
+                                        colorOption.getContentDescription(context).toString()
+                                    ),
+                                enableDrillDown = false,
+                            )
+                        }
+                        // One seed appears once in the Colors tab; Styles owns the style variants.
+                        .distinctBy { it.key }
             }
         }
 
@@ -338,55 +346,32 @@ constructor(
      * change updates, which are applied with a latency.
      */
     val onApply: Flow<(suspend () -> Unit)?> =
-        if (baseFlags.isColorPickerUpdateEnabled()) {
-            combine(selectedColorOption, overridingColorOption, selectedStyle, overridingStyle) {
-                selectedColor,
-                overridingColor,
-                selectedStyle,
-                overridingStyle ->
-                val colorNeedsUpdate =
-                    overridingColor != null && !overridingColor.isEquivalent(selectedColor)
-                val styleNeedsUpdate = overridingStyle != null && overridingStyle != selectedStyle
-                val colorOption = overridingColor ?: selectedColor
-                if ((colorNeedsUpdate || styleNeedsUpdate) && colorOption != null) {
-                    val style = overridingStyle ?: colorOption.style
-                    {
-                        applyAndWaitForColorUpdate(
-                            apply = { interactor.apply(colorOption, style) },
-                            onSuccess = {
-                                logger.logThemeColorApplied(
-                                    colorOption.sourceForLogging,
-                                    // TODO(b/473022455): centralize logging in
-                                    //  ThemesUserEventLogger
-                                    ThemeStyle.toString(style).hashCode(),
-                                    colorOption.seedColor,
-                                )
-                            },
-                        )
-                    }
-                } else null
-            }
-        } else {
-            combine(overridingColorOption, selectedColorOption) { previewing, selected ->
-                previewing?.let {
-                    if (previewing.isEquivalent(selected)) {
-                        null
-                    } else {
-                        {
-                            applyAndWaitForColorUpdate(
-                                apply = { interactor.apply(it) },
-                                onSuccess = {
-                                    logger.logThemeColorApplied(
-                                        it.sourceForLogging,
-                                        it.styleForLogging,
-                                        it.seedColor,
-                                    )
-                                },
+        combine(selectedColorOption, overridingColorOption, selectedStyle, overridingStyle) {
+            selectedColor,
+            overridingColor,
+            selectedStyle,
+            overridingStyle ->
+            val colorNeedsUpdate =
+                overridingColor != null && !overridingColor.isEquivalent(selectedColor)
+            val styleNeedsUpdate = overridingStyle != null && overridingStyle != selectedStyle
+            val colorOption = overridingColor ?: selectedColor
+            if ((colorNeedsUpdate || styleNeedsUpdate) && colorOption != null) {
+                val style = overridingStyle ?: colorOption.style
+                {
+                    applyAndWaitForColorUpdate(
+                        apply = { interactor.apply(colorOption, style) },
+                        onSuccess = {
+                            logger.logThemeColorApplied(
+                                colorOption.sourceForLogging,
+                                // TODO(b/473022455): centralize logging in
+                                //  ThemesUserEventLogger
+                                ThemeStyle.toString(style).hashCode(),
+                                colorOption.seedColor,
                             )
-                        }
-                    }
+                        },
+                    )
                 }
-            }
+            } else null
         }
 
     private suspend fun applyAndWaitForColorUpdate(

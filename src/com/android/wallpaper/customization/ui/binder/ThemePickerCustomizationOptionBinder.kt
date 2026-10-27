@@ -673,20 +673,31 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
                 }
         }
 
-        if (isColorPickerUpdateEnabled && isColorPickerComposeEnabled) {
+        if (isColorPickerComposeEnabled) {
             customizationOptionFloatingSheetViewMap
                 ?.get(ThemePickerHomeCustomizationOption.COLORS)
                 ?.let {
                     (it as ComposeView).apply {
-                        // Make sure Composable lifecycle aligns with fragment lifecycle
+                        // The strategy keeps the Composable lifecycle aligned with the fragment lifecycle.
                         setViewCompositionStrategy(
                             ViewCompositionStrategy.DisposeOnLifecycleDestroyed(lifecycleOwner)
                         )
-                        setContent {
-                            ColorFloatingSheet(
-                                optionsViewModel.darkModeViewModel,
-                                optionsViewModel.colorPickerViewModel2,
-                            )
+                    }
+                    // The Compose tree is rebuilt whenever the sheet opens. The sheet view is
+                    // retained between primary/secondary screens, so an old composition would
+                    // leave the seed list and tab state stale after closing Colors.
+                    lifecycleOwner.lifecycleScope.launch {
+                        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                            optionsViewModel.selectedOption.collect { option ->
+                                if (option == ThemePickerHomeCustomizationOption.COLORS) {
+                                    (it as ComposeView).setContent {
+                                        ColorFloatingSheet(
+                                            optionsViewModel.darkModeViewModel,
+                                            optionsViewModel.colorPickerViewModel2,
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

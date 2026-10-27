@@ -212,7 +212,6 @@ constructor(
                 layoutInflater = layoutInflater,
             )
         val isComposeRefactorEnabled = BaseFlags.get(context).isComposeRefactorEnabled()
-        val isColorPickerUpdateEnabled = BaseFlags.get(context).isColorPickerUpdateEnabled()
         val isColorPickerComposeEnabled = BaseFlags.get(context).isColorPickerComposeEnabled()
         val isDesktopUi: Boolean = BaseFlags.get(context).shouldShowDesktopUi(context)
         val isKeyguardQuickAffordanceEnabled =
@@ -248,7 +247,7 @@ constructor(
 
             put(
                 COLORS,
-                if (isColorPickerUpdateEnabled && isColorPickerComposeEnabled) {
+                if (isColorPickerComposeEnabled) {
                         ComposeView(context)
                     } else {
                         inflateFloatingSheet(COLORS, bottomSheetContainer, layoutInflater)

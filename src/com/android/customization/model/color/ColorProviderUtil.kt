@@ -312,21 +312,18 @@ object ColorProviderUtil {
 
     @ThemeStyle.Type
     fun getStyleList(isColorPickerUpdateEnabled: Boolean): List<Int> {
-        return if (isColorPickerUpdateEnabled) {
-            listOf(
-                ThemeStyle.SPRITZ,
-                ThemeStyle.TONAL_SPOT,
-                ThemeStyle.VIBRANT,
-                ThemeStyle.EXPRESSIVE,
-            )
-        } else {
-            listOf(
-                ThemeStyle.TONAL_SPOT,
-                ThemeStyle.SPRITZ,
-                ThemeStyle.VIBRANT,
-                ThemeStyle.EXPRESSIVE,
-            )
-        }
+        // Keep the order stable across both color-picker paths. Clock-only styles are excluded.
+        return listOf(
+            ThemeStyle.SPRITZ,
+            ThemeStyle.MONOCHROMATIC,
+            ThemeStyle.TONAL_SPOT,
+            ThemeStyle.VIBRANT,
+            ThemeStyle.EXPRESSIVE,
+            ThemeStyle.RAINBOW,
+            ThemeStyle.FRUIT_SALAD,
+            ThemeStyle.CONTENT,
+            ThemeStyle.CMF,
+        )
     }
 
     fun hueToColorOption(hue: Float): ColorOption {

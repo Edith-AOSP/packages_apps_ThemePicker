@@ -270,11 +270,14 @@ constructor(
                             } else {
                                 launch {
                                     combine(
+                                            viewModel.colorPickerViewModel2.selectedColorOption,
                                             viewModel.colorPickerViewModel2.overridingColorOption,
                                             viewModel.darkModeViewModel.overridingIsDarkMode,
-                                            ::Pair,
-                                        )
-                                        .collect { (colorOption, darkMode) ->
+                                        ) { selectedColor, overridingColor, darkMode ->
+                                            Triple(selectedColor, overridingColor, darkMode)
+                                        }
+                                        .collect { (selectedColor, overridingColor, darkMode) ->
+                                            val colorOption = overridingColor ?: selectedColor
                                             val bundle =
                                                 Bundle().apply {
                                                     if (colorOption != null) {

@@ -420,6 +420,18 @@
     <string name="preset_color_tab">Basic colors</string>
     <!-- The revised title for the tab with a default set of color options. [CHAR_LIMIT=20]-->
     <string name="preset_color_tab_2">Other colors</string>
+    <!-- The title for the tab with Material color styles. [CHAR_LIMIT=20]-->
+    <string name="color_style_tab">Styles</string>
+    <string name="color_style_subheader">Choose how your palette is generated</string>
+    <string name="color_style_neutral">Neutral</string>
+    <string name="color_style_monochrome">Monochrome</string>
+    <string name="color_style_tonal_spot">Tonal Spot</string>
+    <string name="color_style_vibrant">Vibrant</string>
+    <string name="color_style_expressive">Expressive</string>
+    <string name="color_style_rainbow">Rainbow</string>
+    <string name="color_style_fruit_salad">Fruit Salad</string>
+    <string name="color_style_content">Content</string>
+    <string name="color_style_cmf">CMF</string>
     <!-- The subheader for the tab with a default set of color options. [CHAR_LIMIT=55]-->
     <string name="preset_color_subheader">Choose any color for your icons, clock, and more</string>
     <!-- The text for A11y announcement when color changes. -->

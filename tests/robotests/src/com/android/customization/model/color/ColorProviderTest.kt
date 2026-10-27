@@ -140,18 +140,12 @@ class ColorProviderTest {
         colorProvider.fetch(listener, reload = true, homeWallpaperColors = wallpaperColors)
 
         val wallpaperOptions = optionsResult.await()?.filter { it.source == "home_wallpaper" }
-        // Flag isColorPickerUpdateEnabled is off, so we expect 4 options each seed, 1 per style.
+        // Two seeds, with every supported style for each seed.
         assertThat(wallpaperOptions).isNotNull()
-        assertThat(wallpaperOptions!!).hasSize(8)
-        // The index should be based on the color seed, starting with 1
-        assertThat(wallpaperOptions[0].index).isEqualTo(1)
-        assertThat(wallpaperOptions[1].index).isEqualTo(1)
-        assertThat(wallpaperOptions[2].index).isEqualTo(1)
-        assertThat(wallpaperOptions[3].index).isEqualTo(1)
-        assertThat(wallpaperOptions[4].index).isEqualTo(2)
-        assertThat(wallpaperOptions[5].index).isEqualTo(2)
-        assertThat(wallpaperOptions[6].index).isEqualTo(2)
-        assertThat(wallpaperOptions[7].index).isEqualTo(2)
+        assertThat(wallpaperOptions!!).hasSize(18)
+        // The index is based on the color seed, with nine style variants per seed.
+        assertThat(wallpaperOptions.map { it.index })
+            .containsExactlyElementsIn(List(9) { 1 } + List(9) { 2 })
         // Color options that are based on the first color seed should be set to default
         assertThat(wallpaperOptions[0].isDefault).isEqualTo(true)
         assertThat(wallpaperOptions[1].isDefault).isEqualTo(true)
@@ -176,18 +170,12 @@ class ColorProviderTest {
         colorProvider.fetch(listener, reload = true, homeWallpaperColors = wallpaperColors)
 
         val wallpaperOptions = optionsResult.await()?.filter { it.source == "home_wallpaper" }
-        // Flag isColorPickerUpdateEnabled is off, so we expect 4 options each seed, 1 per style.
+        // Two seeds, with every supported style for each seed.
         assertThat(wallpaperOptions).isNotNull()
-        assertThat(wallpaperOptions!!).hasSize(8)
-        // The index should be based on the color seed, starting with 1
-        assertThat(wallpaperOptions[0].index).isEqualTo(1)
-        assertThat(wallpaperOptions[1].index).isEqualTo(1)
-        assertThat(wallpaperOptions[2].index).isEqualTo(1)
-        assertThat(wallpaperOptions[3].index).isEqualTo(1)
-        assertThat(wallpaperOptions[4].index).isEqualTo(2)
-        assertThat(wallpaperOptions[5].index).isEqualTo(2)
-        assertThat(wallpaperOptions[6].index).isEqualTo(2)
-        assertThat(wallpaperOptions[7].index).isEqualTo(2)
+        assertThat(wallpaperOptions!!).hasSize(18)
+        // The index is based on the color seed, with nine style variants per seed.
+        assertThat(wallpaperOptions.map { it.index })
+            .containsExactlyElementsIn(List(9) { 1 } + List(9) { 2 })
         // Color options that are based on the first color seed should be set to default
         assertThat(wallpaperOptions[0].isDefault).isEqualTo(true)
         assertThat(wallpaperOptions[1].isDefault).isEqualTo(true)
@@ -376,7 +364,7 @@ class ColorProviderTest {
                 (it as ColorOptionImpl).type == ColorType.WALLPAPER_COLOR
             }
         assertThat(wallpaperOptions).isNotNull()
-        assertThat(wallpaperOptions!!).hasSize(5) // 4 wallpaper + 1 monochrome
+        assertThat(wallpaperOptions!!).hasSize(10) // 9 wallpaper styles + 1 monochrome
         assertThat(wallpaperOptions[1].title).isEqualTo("Monochrome")
     }
 
