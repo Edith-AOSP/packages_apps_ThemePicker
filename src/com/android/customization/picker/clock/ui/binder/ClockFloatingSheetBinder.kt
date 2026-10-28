@@ -358,25 +358,26 @@ object ClockFloatingSheetBinder {
                                 clockSizeContentHeight,
                                 axisPresetSliderHeight) =
                                 heights
+                            clockStyleContent.isVisible = selectedTab == Tab.STYLE
+                            clockColorContent.isVisible = selectedTab == Tab.COLOR
+                            clockSizeContent.isVisible = selectedTab == Tab.SIZE
+
                             clockStyleContentHeight ?: return@collect
                             clockColorContentHeight ?: return@collect
                             clockSizeContentHeight ?: return@collect
-                            axisPresetSliderHeight ?: return@collect
-
-                            clockStyleContent.isVisible = currentTab == Tab.STYLE
-                            clockColorContent.isVisible = currentTab == Tab.COLOR
-                            clockSizeContent.isVisible = currentTab == Tab.SIZE
 
                             val fromHeight = floatingSheetContainer.height
                             val toHeight =
                                 when (selectedTab) {
                                     Tab.STYLE ->
-                                        if (shouldShowPresetSlider)
+                                        if (shouldShowPresetSlider) {
+                                            val sliderHeight =
+                                                axisPresetSliderHeight ?: return@collect
                                             clockStyleContentHeight +
-                                                axisPresetSliderHeight +
+                                                sliderHeight +
                                                 2 * clockStyleContentVerticalPadding +
                                                 clockStyleContentSliderMargin
-                                        else
+                                        } else
                                             clockStyleContentHeight +
                                                 2 * clockStyleContentVerticalPadding
                                     Tab.COLOR -> clockColorContentHeight
