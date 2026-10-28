@@ -82,6 +82,8 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
@@ -306,6 +308,7 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
                 if (customizationOptionsData.isGridCustomizationAvailable) {
                     optionGridIcon?.setColorFilter(color)
                 }
+
                 if (BaseFlags.get(view.context).isPackThemeEnabled()) {
                     optionPackThemeIconLockDefault?.setColorFilter(color)
                     optionPackThemeIconHomeDefault?.setColorFilter(color)
@@ -506,13 +509,62 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
                                             overridingColor,
                                         )
                                     previewColorOption?.let {
+                                        val colorTuning =
+                                            optionsViewModel.colorPickerViewModel2
+                                                .previewingColorTuning
+                                                .value
                                         colorUpdateViewModel.previewColors(
                                             previewColorOption.seedColor,
                                             previewStyle ?: previewColorOption.style,
                                             previewIsDarkMode,
+                                            colorTuning.accentSaturation,
+                                            colorTuning.backgroundSaturation,
+                                            colorTuning.backgroundLightness,
                                         )
                                     }
                                 } else colorUpdateViewModel.resetPreview()
+                            }
+                    }
+
+                    launch {
+                        optionsViewModel.colorPickerViewModel2.previewingColorTuning
+                            .debounce(80)
+                            .collect { colorTuning ->
+                                val overridingColor =
+                                    optionsViewModel.colorPickerViewModel2
+                                        .overridingColorOption
+                                        .value
+                                val selectedColor =
+                                    optionsViewModel.colorPickerViewModel2
+                                        .selectedColorOption
+                                        .first()
+                                val previewColorOption = overridingColor ?: selectedColor
+                                if (previewColorOption != null) {
+                                    val previewStyle =
+                                        optionsViewModel.colorPickerViewModel2.getPreviewingStyle(
+                                            optionsViewModel.colorPickerViewModel2
+                                                .selectedStyle
+                                                .first(),
+                                            optionsViewModel.colorPickerViewModel2
+                                                .overridingStyle
+                                                .first(),
+                                            selectedColor,
+                                            overridingColor,
+                                        )
+                                    val previewIsDarkMode =
+                                        optionsViewModel.darkModeViewModel
+                                            .overridingIsDarkMode
+                                            .value
+                                            ?: view.resources.configuration.isNightModeActive
+                                    colorUpdateViewModel.previewColors(
+                                        previewColorOption.seedColor,
+                                        previewStyle ?: previewColorOption.style,
+                                        previewIsDarkMode,
+                                        colorTuning.accentSaturation,
+                                        colorTuning.backgroundSaturation,
+                                        colorTuning.backgroundLightness,
+                                    )
+                                }
                             }
                     }
                 }

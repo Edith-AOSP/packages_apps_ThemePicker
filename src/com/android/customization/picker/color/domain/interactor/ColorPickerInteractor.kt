@@ -19,6 +19,7 @@ package com.android.customization.picker.color.domain.interactor
 import android.content.theming.ThemeStyle
 import com.android.customization.model.color.ColorOption
 import com.android.customization.picker.color.data.repository.ColorPickerRepository
+import com.android.customization.picker.color.shared.model.ColorTuning
 import com.android.customization.picker.color.shared.model.ColorType
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,10 +39,17 @@ class ColorPickerInteractor @Inject constructor(private val repository: ColorPic
 
     val freeformColorHue = repository.freeformColorHue
 
+    val colorTuning = repository.colorTuning
+
+    val supportsColorTuning = repository.supportsColorTuning
+
     suspend fun apply(colorOption: ColorOption): Boolean = repository.apply(colorOption)
 
-    suspend fun apply(colorOption: ColorOption, @ThemeStyle.Type style: Int): Boolean =
-        repository.apply(colorOption, style)
+    suspend fun apply(
+        colorOption: ColorOption,
+        @ThemeStyle.Type style: Int,
+        colorTuning: ColorTuning? = null,
+    ): Boolean = repository.apply(colorOption, style, colorTuning)
 
     fun saveFreeformColor(hue: Float) = repository.saveFreeformColor(hue)
 }

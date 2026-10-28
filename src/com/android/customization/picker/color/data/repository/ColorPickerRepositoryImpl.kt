@@ -39,8 +39,10 @@ import com.android.customization.model.color.ColorProvider
 import com.android.customization.model.color.ColorProviderUtil
 import com.android.customization.model.color.ColorProviderUtil.hueToColorOption
 import com.android.customization.module.CustomizationPreferences
+import com.android.customization.picker.color.shared.model.ColorTuning
 import com.android.customization.picker.color.shared.model.ColorType
 import com.android.systemui.monet.ColorScheme
+import com.android.systemui.shared.settings.data.repository.SecureSettingsRepository
 import com.android.themepicker.R
 import com.android.wallpaper.config.BaseFlags
 import com.android.wallpaper.model.Screen
@@ -60,6 +62,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -76,6 +79,7 @@ constructor(
     private val colorManager: ColorCustomizationManager,
     private val themeManager: ThemeManager?,
     private val wallpaperPreferences: WallpaperPreferences,
+    private val secureSettingsRepository: SecureSettingsRepository,
     client: WallpaperClient,
     private val baseFlags: BaseFlags,
 ) : ColorPickerRepository {
@@ -88,6 +92,14 @@ constructor(
                 PackageManager.PERMISSION_GRANTED
     private val colorProvider =
         ColorProvider(appContext, appContext.getString(R.string.themes_stub_package))
+
+    override val supportsColorTuning: Boolean = true
+
+    override val colorTuning: Flow<ColorTuning> =
+        secureSettingsRepository
+            .stringSetting(ColorTuning.SETTING, null)
+            .map { json -> ColorTuning.fromJson(json) }
+            .distinctUntilChanged()
 
     init {
         if (shouldUseThemeService) {
@@ -370,7 +382,11 @@ constructor(
     }
 
     /** Selects a color option and style and returns whether the operation was successful */
-    override suspend fun apply(colorOption: ColorOption, @ThemeStyle.Type style: Int): Boolean {
+    override suspend fun apply(
+        colorOption: ColorOption,
+        @ThemeStyle.Type style: Int,
+        colorTuning: ColorTuning?,
+    ): Boolean {
         val colorOptionForApply =
             if (style == colorOption.style) {
                 colorOption
@@ -402,7 +418,19 @@ constructor(
                     )
                 }
             }
-        return apply(colorOptionForApply)
+        val applied = apply(colorOptionForApply)
+        if (applied && colorTuning != null) {
+            writeColorTuning(colorTuning)
+        }
+        return applied
+    }
+
+    private suspend fun writeColorTuning(colorTuning: ColorTuning) {
+        val current = secureSettingsRepository.getString(ColorTuning.SETTING)
+        secureSettingsRepository.setString(
+            ColorTuning.SETTING,
+            ColorTuning.writeTo(current, colorTuning),
+        )
     }
 
     override fun saveFreeformColor(hue: Float) {

@@ -397,6 +397,8 @@
 
     <!-- The title of mode section view. [CHAR_LIMIT=20] -->
     <string name="mode_title" msgid="1000319159005403986">Dark theme</string>
+    <string name="switch_to_dark_theme">Switch to dark theme</string>
+    <string name="switch_to_light_theme">Switch to light theme</string>
     <string name="mode_disabled_msg" msgid="1926077857799715086">Temporarily disabled due to Battery Saver</string>
 
     <!-- Title of a section of the customization where the user can select color override for icon. [CHAR LIMIT=30] -->
@@ -423,6 +425,17 @@
     <!-- The title for the tab with Material color styles. [CHAR_LIMIT=20]-->
     <string name="color_style_tab">Styles</string>
     <string name="color_style_subheader">Choose how your palette is generated</string>
+    <string name="color_tune_tab">Tune</string>
+    <string name="color_tune_subheader">Fine-tune the intensity of your palette</string>
+    <string name="accent_saturation_title">Accent saturation</string>
+    <string name="background_saturation_title">Background saturation</string>
+    <string name="background_lightness_title">Background lightness</string>
+    <string name="color_tuning_selected">Selected: %1$s</string>
+    <string name="color_tuning_accent">Accent</string>
+    <string name="color_tuning_saturation">Saturation</string>
+    <string name="color_tuning_background">Background</string>
+    <string name="color_tuning_lightness">Lightness</string>
+    <string name="color_tuning_reset">Reset</string>
     <string name="color_style_neutral">Neutral</string>
     <string name="color_style_monochrome">Monochrome</string>
     <string name="color_style_tonal_spot">Tonal Spot</string>

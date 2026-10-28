@@ -18,6 +18,8 @@ package com.android.customization.picker.color.ui.compose
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -55,8 +57,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -67,8 +68,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -86,6 +87,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.animation.bounceable
 import com.android.compose.theme.PlatformTheme
 import com.android.customization.model.color.ColorOption
+import com.android.customization.picker.color.shared.model.ColorTuning
 import com.android.customization.picker.color.shared.model.ColorType
 import com.android.customization.picker.color.ui.viewmodel.ColorOptionIconViewModel
 import com.android.customization.picker.color.ui.viewmodel.ColorOptionViewModel
@@ -94,6 +96,7 @@ import com.android.customization.picker.mode.ui.viewmodel.DarkModeViewModel
 import com.android.systemui.monet.ColorScheme
 import com.android.themepicker.R
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -102,6 +105,7 @@ enum class ColorSheetTab {
     WALLPAPER_COLORS,
     OTHER_COLORS,
     STYLES,
+    TUNE,
 }
 
 @Composable
@@ -137,12 +141,29 @@ fun ColorFloatingSheet(
         colorPickerViewModel.hueSliderPosition.collectAsStateWithLifecycle(
             initialValue = ColorPickerViewModel.HUE_INIT_VALUE
         )
+    val previewingColorTuning: ColorTuning by
+        colorPickerViewModel.previewingColorTuning.collectAsStateWithLifecycle(
+            initialValue = ColorTuning.DEFAULT
+        )
+    val supportsColorTuning = colorPickerViewModel.supportsColorTuning
 
     PlatformTheme {
         val scheme =
-            remember(previewingColorOption, previewingIsDarkMode, previewingStyle) {
+            remember(
+                previewingColorOption,
+                previewingIsDarkMode,
+                previewingStyle,
+                previewingColorTuning,
+            ) {
                 previewingColorOption?.let {
-                    ColorScheme(it.seedColor, previewingIsDarkMode, previewingStyle ?: it.style)
+                    ColorScheme(
+                            it.seedColor,
+                            previewingIsDarkMode,
+                            previewingStyle ?: it.style,
+                            previewingColorTuning.accentSaturation,
+                            previewingColorTuning.backgroundSaturation,
+                            previewingColorTuning.backgroundLightness,
+                        )
                         .materialScheme
                 }
             }
@@ -164,6 +185,9 @@ fun ColorFloatingSheet(
                             selectedStyle = previewingStyle,
                             previewingSeedColor = previewingColorOption?.seedColor,
                             onStyleClick = colorPickerViewModel::selectStyle,
+                            previewingColorTuning = previewingColorTuning,
+                            supportsColorTuning = supportsColorTuning,
+                            onColorTuningChange = colorPickerViewModel::updateColorTuning,
                             navigateToFreeformPicker = {
                                 colorPickerViewModel.setScreen(
                                     ColorPickerViewModel.Screen.FREEFORM_PICKER
@@ -213,6 +237,9 @@ fun ColorFloatingSheetLanding(
     selectedStyle: Int?,
     previewingSeedColor: Int?,
     onStyleClick: (Int) -> Unit,
+    previewingColorTuning: ColorTuning,
+    supportsColorTuning: Boolean,
+    onColorTuningChange: (ColorTuning) -> Unit,
     navigateToFreeformPicker: () -> Unit,
     modifier: Modifier,
 ) {
@@ -227,7 +254,7 @@ fun ColorFloatingSheetLanding(
                 colorSeedOptions.filter {
                     it.first == ColorType.PRESET_COLOR || it.first == ColorType.FREEFORM_COLOR
                 }
-            ColorSheetTab.STYLES -> emptyList()
+            ColorSheetTab.STYLES, ColorSheetTab.TUNE -> emptyList()
         }
 
     Column(
@@ -255,20 +282,55 @@ fun ColorFloatingSheetLanding(
                     style = MaterialTheme.typography.titleMedium,
                 )
 
-                IconButton(
-                    modifier = Modifier.size(32.dp),
-                    onClick = navigateToFreeformPicker,
-                    colors =
-                        IconButtonDefaults.iconButtonColors(
-                            containerColor = colorScheme.surfaceDim,
-                            contentColor = colorScheme.onSurface,
-                        ),
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        modifier = Modifier.size(20.dp),
-                        painter = painterResource(R.drawable.ic_palette_filled_24px),
-                        contentDescription = "",
-                    )
+                    IconButton(
+                        modifier = Modifier.size(32.dp),
+                        onClick = toggleIsDarkMode,
+                        enabled = isDarkModeToggleEnabled,
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                containerColor = colorScheme.surfaceDim,
+                                contentColor = colorScheme.onSurface,
+                            ),
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(20.dp),
+                            painter =
+                                painterResource(
+                                    if (isDarkMode) {
+                                        R.drawable.ic_light_mode_24
+                                    } else {
+                                        R.drawable.ic_dark_mode_24
+                                    }
+                                ),
+                            contentDescription =
+                                stringResource(
+                                    if (isDarkMode) {
+                                        R.string.switch_to_light_theme
+                                    } else {
+                                        R.string.switch_to_dark_theme
+                                    }
+                                ),
+                        )
+                    }
+                    IconButton(
+                        modifier = Modifier.size(32.dp),
+                        onClick = navigateToFreeformPicker,
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                containerColor = colorScheme.surfaceDim,
+                                contentColor = colorScheme.onSurface,
+                            ),
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(20.dp),
+                            painter = painterResource(R.drawable.ic_palette_filled_24px),
+                            contentDescription = "",
+                        )
+                    }
                 }
             }
 
@@ -282,6 +344,7 @@ fun ColorFloatingSheetLanding(
                             ColorSheetTab.WALLPAPER_COLORS -> R.string.wallpaper_color_subheader
                             ColorSheetTab.OTHER_COLORS -> R.string.preset_color_subheader
                             ColorSheetTab.STYLES -> R.string.color_style_subheader
+                            ColorSheetTab.TUNE -> R.string.color_tune_subheader
                         }
                     ),
                 color = colorScheme.onSurfaceVariant,
@@ -296,9 +359,15 @@ fun ColorFloatingSheetLanding(
                     styleOptions = styleOptions,
                     selectedStyle = selectedStyle,
                     previewingSeedColor = previewingSeedColor,
+                    previewingColorTuning = previewingColorTuning,
                     previewingIsDarkMode = isDarkMode,
                     onStyleClick = onStyleClick,
                     modifier = Modifier.fillMaxWidth(),
+                )
+            } else if (selectedTab == ColorSheetTab.TUNE) {
+                ColorTuningPanel(
+                    colorTuning = previewingColorTuning,
+                    onColorTuningChange = onColorTuningChange,
                 )
             } else {
                 // TODO (b/441279631): implement scroll to selected color option
@@ -345,44 +414,6 @@ fun ColorFloatingSheetLanding(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(R.string.mode_title),
-                    color = colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-
-                Switch(
-                    modifier = Modifier.scale(1.1f),
-                    checked = isDarkMode,
-                    onCheckedChange = { toggleIsDarkMode() },
-                    enabled = isDarkModeToggleEnabled,
-                    thumbContent = {
-                        Icon(
-                            painter =
-                                painterResource(
-                                    if (isDarkMode) {
-                                        com.android.wallpaper.R.drawable.ic_check_wallpaper
-                                    } else {
-                                        com.android.wallpaper.R.drawable.ic_close
-                                    }
-                                ),
-                            contentDescription = null,
-                            tint =
-                                if (isDarkMode) colorScheme.onPrimary
-                                else colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                        )
-                    },
-                )
-            }
         }
     }
 
@@ -390,6 +421,7 @@ fun ColorFloatingSheetLanding(
 
     ColorSheetTabRow(
         selectedTab = selectedTab,
+        showTune = supportsColorTuning,
         onTabSelected = { selectedTab = it },
         modifier = Modifier.padding(horizontal = 16.dp),
     )
@@ -399,28 +431,44 @@ fun ColorFloatingSheetLanding(
 @Composable
 private fun ColorSheetTabRow(
     selectedTab: ColorSheetTab,
+    showTune: Boolean,
     onTabSelected: (ColorSheetTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = LocalAnimatedColorScheme.current
     val tabs =
-        listOf(
-            ColorToolbarTab(
-                tab = ColorSheetTab.WALLPAPER_COLORS,
-                labelRes = R.string.wallpaper_color_tab,
-                iconRes = com.android.wallpaper.R.drawable.ic_baseline_wallpaper_24,
-            ),
-            ColorToolbarTab(
-                tab = ColorSheetTab.OTHER_COLORS,
-                labelRes = R.string.preset_color_tab_2,
-                iconRes = R.drawable.ic_colors,
-            ),
-            ColorToolbarTab(
-                tab = ColorSheetTab.STYLES,
-                labelRes = R.string.color_style_tab,
-                iconRes = R.drawable.ic_palette_filled_24px,
-            ),
-        )
+        buildList {
+            add(
+                ColorToolbarTab(
+                    tab = ColorSheetTab.WALLPAPER_COLORS,
+                    labelRes = R.string.wallpaper_color_tab,
+                    iconRes = com.android.wallpaper.R.drawable.ic_baseline_wallpaper_24,
+                )
+            )
+            add(
+                ColorToolbarTab(
+                    tab = ColorSheetTab.OTHER_COLORS,
+                    labelRes = R.string.preset_color_tab_2,
+                    iconRes = R.drawable.ic_colors,
+                )
+            )
+            add(
+                ColorToolbarTab(
+                    tab = ColorSheetTab.STYLES,
+                    labelRes = R.string.color_style_tab,
+                    iconRes = R.drawable.ic_palette_filled_24px,
+                )
+            )
+            if (showTune) {
+                add(
+                    ColorToolbarTab(
+                        tab = ColorSheetTab.TUNE,
+                        labelRes = R.string.color_tune_tab,
+                        iconRes = com.android.wallpaper.R.drawable.ic_tune_black_24dp,
+                    )
+                )
+            }
+        }
     val toolbarModifier =
         modifier
             .wrapContentWidth()
@@ -490,6 +538,173 @@ private fun ColorSheetTabRow(
     }
 }
 
+private enum class TuningSection {
+    ACCENT,
+    BACKGROUND,
+}
+
+@Composable
+private fun ColorTuningPanel(
+    colorTuning: ColorTuning,
+    onColorTuningChange: (ColorTuning) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var section by remember { mutableStateOf(TuningSection.ACCENT) }
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            TuningSectionTab(
+                text = stringResource(R.string.color_tuning_accent),
+                selected = section == TuningSection.ACCENT,
+                onClick = { section = TuningSection.ACCENT },
+                modifier = Modifier.weight(1f),
+            )
+            TuningSectionTab(
+                text = stringResource(R.string.color_tuning_background),
+                selected = section == TuningSection.BACKGROUND,
+                onClick = { section = TuningSection.BACKGROUND },
+                modifier = Modifier.weight(1f),
+            )
+        }
+        when (section) {
+            TuningSection.ACCENT ->
+                TuningRow(
+                    title = stringResource(R.string.color_tuning_saturation),
+                    value = colorTuning.accentSaturation,
+                    onValueChange = {
+                        onColorTuningChange(colorTuning.withAccentSaturation(it))
+                    },
+                )
+            TuningSection.BACKGROUND -> {
+                TuningRow(
+                    title = stringResource(R.string.color_tuning_saturation),
+                    value = colorTuning.backgroundSaturation,
+                    onValueChange = {
+                        onColorTuningChange(colorTuning.withBackgroundSaturation(it))
+                    },
+                )
+                TuningRow(
+                    title = stringResource(R.string.color_tuning_lightness),
+                    value = colorTuning.backgroundLightness,
+                    onValueChange = {
+                        onColorTuningChange(colorTuning.withBackgroundLightness(it))
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TuningSectionTab(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme: CustomColorScheme = LocalAnimatedColorScheme.current
+    val cornerRadius by
+        animateDpAsState(
+            targetValue = if (selected) 12.dp else 20.dp,
+            animationSpec = tween(durationMillis = 300),
+            label = "tuningSectionCorner",
+        )
+    val containerColor by
+        animateColorAsState(
+            targetValue =
+                if (selected) colorScheme.secondaryContainer else colorScheme.surfaceDim,
+            animationSpec = tween(durationMillis = 220),
+            label = "tuningSectionContainer",
+        )
+    Box(
+        modifier =
+            modifier
+                .height(40.dp)
+                .clip(RoundedCornerShape(cornerRadius))
+                .background(containerColor)
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color =
+                if (selected) colorScheme.onSecondaryContainer else colorScheme.onSurfaceVariant,
+            style =
+                if (selected) {
+                    MaterialTheme.typography.labelLarge
+                } else {
+                    MaterialTheme.typography.bodyMedium
+                },
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun TuningRow(
+    title: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme: CustomColorScheme = LocalAnimatedColorScheme.current
+    val rotation = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.width(100.dp)) {
+            Text(
+                text = title,
+                color = colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+            )
+        }
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.roundToInt()) },
+            valueRange = ColorTuning.MIN.toFloat()..ColorTuning.MAX.toFloat(),
+            modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
+        )
+        Text(
+            text = formatTuningValue(value),
+            color = colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            modifier = Modifier.width(36.dp),
+        )
+        IconButton(
+            modifier = Modifier.size(40.dp),
+            enabled = value != ColorTuning.NEUTRAL,
+            onClick = {
+                onValueChange(ColorTuning.NEUTRAL)
+                scope.launch {
+                    rotation.snapTo(0f)
+                    rotation.animateTo(360f, animationSpec = tween(durationMillis = 350))
+                }
+            },
+        ) {
+            Icon(
+                modifier = Modifier.size(18.dp).rotate(rotation.value),
+                painter = painterResource(com.android.wallpaper.R.drawable.ic_refresh_18px),
+                contentDescription = stringResource(R.string.color_tuning_reset),
+            )
+        }
+    }
+}
+
+private fun formatTuningValue(value: Int): String =
+    if (value % 100 == 0) {
+        "${value / 100}x"
+    } else {
+        String.format(java.util.Locale.US, "%.1fx", value / 100f)
+    }
+
 private data class ColorToolbarTab(
     val tab: ColorSheetTab,
     val labelRes: Int,
@@ -501,6 +716,7 @@ private fun StyleRow(
     styleOptions: List<StyleBounceable>,
     selectedStyle: Int?,
     previewingSeedColor: Int?,
+    previewingColorTuning: ColorTuning,
     previewingIsDarkMode: Boolean,
     onStyleClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -516,6 +732,7 @@ private fun StyleRow(
                 style = option.style,
                 selected = option.style == selectedStyle,
                 previewingSeedColor = previewingSeedColor,
+                previewingColorTuning = previewingColorTuning,
                 previewingIsDarkMode = previewingIsDarkMode,
                 onClick = {
                     onStyleClick(option.style)

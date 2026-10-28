@@ -18,6 +18,7 @@ package com.android.customization.picker.color.data.repository
 
 import android.content.theming.ThemeStyle
 import com.android.customization.model.color.ColorOption
+import com.android.customization.picker.color.shared.model.ColorTuning
 import com.android.customization.picker.color.shared.model.ColorType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,11 +42,21 @@ interface ColorPickerRepository {
 
     val freeformColorHue: StateFlow<Float?>
 
+    /** Relative palette intensity adjustments, read from the theme settings. */
+    val colorTuning: Flow<ColorTuning>
+
+    /** Whether the theme service can apply palette intensity adjustments. */
+    val supportsColorTuning: Boolean
+
     /** Selects a color option and returns whether the operation was successful */
     suspend fun apply(colorOption: ColorOption): Boolean
 
     /** Selects a color option and style and returns whether the operation was successful */
-    suspend fun apply(colorOption: ColorOption, @ThemeStyle.Type style: Int): Boolean
+    suspend fun apply(
+        colorOption: ColorOption,
+        @ThemeStyle.Type style: Int,
+        colorTuning: ColorTuning? = null,
+    ): Boolean
 
     fun saveFreeformColor(hue: Float)
 }

@@ -38,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.android.customization.picker.color.shared.model.ColorTuning
 import com.android.customization.picker.color.ui.compose.Shader.CUSTOM_SHADER
 import com.android.systemui.monet.ColorScheme
 import com.android.themepicker.R
@@ -51,6 +52,7 @@ fun StyleOptionCard(
     @ThemeStyle.Type style: Int,
     selected: Boolean,
     previewingSeedColor: Int?,
+    previewingColorTuning: ColorTuning,
     previewingIsDarkMode: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -58,9 +60,17 @@ fun StyleOptionCard(
     val colorScheme = LocalAnimatedColorScheme.current
     val animatedAlpha: Float by animateFloatAsState(if (selected) 1f else 0.25f)
     val scheme =
-        remember(previewingSeedColor, previewingIsDarkMode, style) {
+        remember(previewingSeedColor, previewingIsDarkMode, style, previewingColorTuning) {
             previewingSeedColor?.let {
-                ColorScheme(it, previewingIsDarkMode, style).materialScheme
+                ColorScheme(
+                        it,
+                        previewingIsDarkMode,
+                        style,
+                        previewingColorTuning.accentSaturation,
+                        previewingColorTuning.backgroundSaturation,
+                        previewingColorTuning.backgroundLightness,
+                    )
+                    .materialScheme
             }
         }
     Column(modifier = modifier) {

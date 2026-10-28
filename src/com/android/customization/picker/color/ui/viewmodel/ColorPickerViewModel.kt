@@ -23,6 +23,7 @@ import com.android.customization.model.color.ColorOptionImpl
 import com.android.customization.model.color.ColorProviderUtil.hueToColorOption
 import com.android.customization.module.logging.ThemesUserEventLogger
 import com.android.customization.picker.color.domain.interactor.ColorPickerInteractor
+import com.android.customization.picker.color.shared.model.ColorTuning
 import com.android.customization.picker.color.shared.model.ColorType
 import com.android.themepicker.R
 import com.android.wallpaper.config.BaseFlags
@@ -43,6 +44,7 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -68,6 +70,23 @@ constructor(
     @Assisted private val viewModelScope: CoroutineScope,
 ) {
     val selectedColorOption = interactor.selectedColorOption
+
+    val supportsColorTuning: Boolean = interactor.supportsColorTuning
+
+    private val selectedColorTuning = interactor.colorTuning
+    private val _overridingColorTuning = MutableStateFlow<ColorTuning?>(null)
+
+    /** The palette intensity adjustments currently shown in the Tune tab. */
+    val previewingColorTuning: StateFlow<ColorTuning> =
+        combine(selectedColorTuning, _overridingColorTuning) { selected, overriding ->
+                overriding ?: selected
+            }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, ColorTuning.DEFAULT)
+
+    fun updateColorTuning(colorTuning: ColorTuning) {
+        _overridingColorTuning.value = colorTuning
+    }
 
     // The overriding color on the color picker landing screen
     private val _overridingColorOption = MutableStateFlow<ColorOption?>(null)
@@ -346,20 +365,26 @@ constructor(
      * change updates, which are applied with a latency.
      */
     val onApply: Flow<(suspend () -> Unit)?> =
-        combine(selectedColorOption, overridingColorOption, selectedStyle, overridingStyle) {
-            selectedColor,
-            overridingColor,
+        combine(
+            selectedColorOption,
+            overridingColorOption,
             selectedStyle,
-            overridingStyle ->
+            overridingStyle,
+            combine(selectedColorTuning, previewingColorTuning) { selected, previewing ->
+                selected to previewing
+            },
+        ) { selectedColor, overridingColor, selectedStyle, overridingStyle, tuningPair ->
+            val (selectedTuning, previewingTuning) = tuningPair
             val colorNeedsUpdate =
                 overridingColor != null && !overridingColor.isEquivalent(selectedColor)
             val styleNeedsUpdate = overridingStyle != null && overridingStyle != selectedStyle
+            val tuningNeedsUpdate = previewingTuning != selectedTuning
             val colorOption = overridingColor ?: selectedColor
-            if ((colorNeedsUpdate || styleNeedsUpdate) && colorOption != null) {
+            if ((colorNeedsUpdate || styleNeedsUpdate || tuningNeedsUpdate) && colorOption != null) {
                 val style = overridingStyle ?: colorOption.style
                 {
                     applyAndWaitForColorUpdate(
-                        apply = { interactor.apply(colorOption, style) },
+                        apply = { interactor.apply(colorOption, style, previewingTuning) },
                         onSuccess = {
                             logger.logThemeColorApplied(
                                 colorOption.sourceForLogging,
@@ -393,6 +418,7 @@ constructor(
             }
             val success = apply()
             if (success) {
+                _overridingColorTuning.value = null
                 onSuccess()
                 waitForColorUpdateJob.join()
             } else {
@@ -405,6 +431,7 @@ constructor(
         _overridingColorOption.value = null
         _overridingStyle.value = null
         _tempOverridingStyle.value = null
+        _overridingColorTuning.value = null
     }
 
     /** The list of all available color options for the selected Color Type. */

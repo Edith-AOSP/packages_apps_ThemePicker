@@ -56,6 +56,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @Singleton
@@ -230,9 +231,9 @@ constructor(
                                                         (colorNeedsUpdate || styleNeedsUpdate) &&
                                                             colorOption != null
                                                     ) {
+                                                        val style =
+                                                            overridingStyle ?: colorOption.style
                                                         if (baseFlags.isThemeServiceEnabled()) {
-                                                            val style =
-                                                                overridingStyle ?: colorOption.style
                                                             // TODO (b/488057749): enable multi-seed
                                                             putIntArray(
                                                                 KEY_SEED_COLOR_LIST,
@@ -240,13 +241,14 @@ constructor(
                                                             )
                                                             putInt(KEY_THEME_STYLE, style)
                                                         } else {
-                                                            val style =
-                                                                overridingStyle ?: colorOption.style
                                                             val (ids, colors) =
                                                                 materialColorsGenerator.generate(
                                                                     colorOption.seedColor,
                                                                     style,
                                                                     overridingDarkMode,
+                                                                    viewModel.colorPickerViewModel2
+                                                                        .previewingColorTuning
+                                                                        .value,
                                                                 )
                                                             putIntArray(KEY_COLOR_RESOURCE_IDS, ids)
                                                             putIntArray(KEY_COLOR_VALUES, colors)
@@ -272,31 +274,43 @@ constructor(
                                     combine(
                                             viewModel.colorPickerViewModel2.selectedColorOption,
                                             viewModel.colorPickerViewModel2.overridingColorOption,
+                                            viewModel.colorPickerViewModel2.overridingStyle,
                                             viewModel.darkModeViewModel.overridingIsDarkMode,
-                                        ) { selectedColor, overridingColor, darkMode ->
-                                            Triple(selectedColor, overridingColor, darkMode)
+                                        ) { selectedColor, overridingColor, overridingStyle, darkMode ->
+                                            Quadruple(
+                                                selectedColor,
+                                                overridingColor,
+                                                overridingStyle,
+                                                darkMode,
+                                            )
                                         }
-                                        .collect { (selectedColor, overridingColor, darkMode) ->
+                                        .collect {
+                                            (
+                                                selectedColor,
+                                                overridingColor,
+                                                overridingStyle,
+                                                darkMode) ->
                                             val colorOption = overridingColor ?: selectedColor
+                                            val style = overridingStyle ?: colorOption?.style
                                             val bundle =
                                                 Bundle().apply {
-                                                    if (colorOption != null) {
+                                                    if (colorOption != null && style != null) {
                                                         if (baseFlags.isThemeServiceEnabled()) {
                                                             // TODO (b/488057749): enable multi-seed
                                                             putIntArray(
                                                                 KEY_SEED_COLOR_LIST,
                                                                 intArrayOf(colorOption.seedColor),
                                                             )
-                                                            putInt(
-                                                                KEY_THEME_STYLE,
-                                                                colorOption.style,
-                                                            )
+                                                            putInt(KEY_THEME_STYLE, style)
                                                         } else {
                                                             val (ids, colors) =
                                                                 materialColorsGenerator.generate(
                                                                     colorOption.seedColor,
-                                                                    colorOption.style,
+                                                                    style,
                                                                     darkMode,
+                                                                    viewModel.colorPickerViewModel2
+                                                                        .previewingColorTuning
+                                                                        .value,
                                                                 )
                                                             putIntArray(KEY_COLOR_RESOURCE_IDS, ids)
                                                             putIntArray(KEY_COLOR_VALUES, colors)
@@ -314,6 +328,52 @@ constructor(
                                             )
                                         }
                                 }
+                            }
+
+                            launch {
+                                viewModel.colorPickerViewModel2.previewingColorTuning
+                                    .debounce(80)
+                                    .collect { colorTuning ->
+                                        val colorOption =
+                                            viewModel.colorPickerViewModel2
+                                                .overridingColorOption
+                                                .value
+                                                ?: viewModel.colorPickerViewModel2
+                                                    .selectedColorOption
+                                                    .first()
+                                        if (colorOption != null) {
+                                            val style =
+                                                viewModel.colorPickerViewModel2
+                                                    .overridingStyle
+                                                    .first()
+                                                    ?: viewModel.colorPickerViewModel2
+                                                        .selectedStyle
+                                                        .first()
+                                                    ?: colorOption.style
+                                            val darkMode =
+                                                viewModel.darkModeViewModel
+                                                    .overridingIsDarkMode
+                                                    .value
+                                            val (ids, colors) =
+                                                materialColorsGenerator.generate(
+                                                    colorOption.seedColor,
+                                                    style,
+                                                    darkMode,
+                                                    colorTuning,
+                                                )
+                                            safeSendMessage(
+                                                workspaceCallback,
+                                                MESSAGE_ID_UPDATE_COLOR,
+                                                Bundle().apply {
+                                                    putIntArray(KEY_COLOR_RESOURCE_IDS, ids)
+                                                    putIntArray(KEY_COLOR_VALUES, colors)
+                                                    if (darkMode != null) {
+                                                        putBoolean(KEY_DARK_MODE, darkMode)
+                                                    }
+                                                },
+                                            )
+                                        }
+                                    }
                             }
 
                             launch {

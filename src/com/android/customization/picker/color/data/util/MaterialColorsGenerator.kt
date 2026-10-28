@@ -22,6 +22,7 @@ import android.content.theming.ThemeStyle
 import android.provider.Settings
 import android.util.Log
 import com.android.customization.model.ResourceConstants
+import com.android.customization.picker.color.shared.model.ColorTuning
 import com.android.systemui.monet.ColorScheme
 import com.android.systemui.monet.DynamicColors
 import com.android.systemui.shared.settings.data.repository.SecureSettingsRepository
@@ -127,14 +128,29 @@ constructor(
         colorSeed: Int,
         @ThemeStyle.Type style: Int,
         useDarkMode: Boolean?,
+        colorTuning: ColorTuning = ColorTuning.DEFAULT,
     ): Pair<IntArray, IntArray> {
         val isDarkMode =
             useDarkMode
                 ?: ((applicationContext.resources.configuration.uiMode and
                     Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)
         return generate(
-            ColorScheme(colorSeed, false, style),
-            ColorScheme(colorSeed, true, style),
+            ColorScheme(
+                colorSeed,
+                false,
+                style,
+                colorTuning.accentSaturation,
+                colorTuning.backgroundSaturation,
+                colorTuning.backgroundLightness,
+            ),
+            ColorScheme(
+                colorSeed,
+                true,
+                style,
+                colorTuning.accentSaturation,
+                colorTuning.backgroundSaturation,
+                colorTuning.backgroundLightness,
+            ),
             isDarkMode,
         )
     }
