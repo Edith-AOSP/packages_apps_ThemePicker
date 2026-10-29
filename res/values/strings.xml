@@ -435,6 +435,14 @@
     <string name="color_tuning_saturation">Saturation</string>
     <string name="color_tuning_background">Background</string>
     <string name="color_tuning_lightness">Lightness</string>
+    <string name="color_advanced_tab">Advanced</string>
+    <string name="color_advanced_subheader">More color options</string>
+    <string name="color_accurate_shades_title">Accurate shades</string>
+    <string name="color_accurate_shades_description">Use the palette\'s standard shade curve</string>
+    <string name="color_tinted_text_title">Tint text color</string>
+    <string name="color_tinted_text_description">Tint surface text with the palette</string>
+    <string name="color_advanced_backup">Back up</string>
+    <string name="color_advanced_restore">Restore</string>
     <string name="color_tuning_reset">Reset</string>
     <string name="color_style_neutral">Neutral</string>
     <string name="color_style_monochrome">Monochrome</string>

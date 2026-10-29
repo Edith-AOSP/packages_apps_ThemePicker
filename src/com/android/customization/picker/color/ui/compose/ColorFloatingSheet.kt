@@ -31,10 +31,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation.Horizontal
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -47,15 +47,20 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -75,6 +80,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -97,8 +105,12 @@ import com.android.systemui.monet.ColorScheme
 import com.android.themepicker.R
 import kotlin.math.ceil
 import kotlin.math.roundToInt
+import android.provider.Settings
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
 /** Top-level pages in the Colors floating sheet. */
 enum class ColorSheetTab {
@@ -106,6 +118,7 @@ enum class ColorSheetTab {
     OTHER_COLORS,
     STYLES,
     TUNE,
+    ADVANCED,
 }
 
 @Composable
@@ -163,6 +176,7 @@ fun ColorFloatingSheet(
                             previewingColorTuning.accentSaturation,
                             previewingColorTuning.backgroundSaturation,
                             previewingColorTuning.backgroundLightness,
+                            previewingColorTuning.accurateShades,
                         )
                         .materialScheme
                 }
@@ -254,7 +268,7 @@ fun ColorFloatingSheetLanding(
                 colorSeedOptions.filter {
                     it.first == ColorType.PRESET_COLOR || it.first == ColorType.FREEFORM_COLOR
                 }
-            ColorSheetTab.STYLES, ColorSheetTab.TUNE -> emptyList()
+            ColorSheetTab.STYLES, ColorSheetTab.TUNE, ColorSheetTab.ADVANCED -> emptyList()
         }
 
     Column(
@@ -336,23 +350,27 @@ fun ColorFloatingSheetLanding(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                text =
-                    stringResource(
-                        when (selectedTab) {
-                            ColorSheetTab.WALLPAPER_COLORS -> R.string.wallpaper_color_subheader
-                            ColorSheetTab.OTHER_COLORS -> R.string.preset_color_subheader
-                            ColorSheetTab.STYLES -> R.string.color_style_subheader
-                            ColorSheetTab.TUNE -> R.string.color_tune_subheader
-                        }
-                    ),
-                color = colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-            )
+            if (selectedTab != ColorSheetTab.ADVANCED) {
+                Text(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    text =
+                        stringResource(
+                            when (selectedTab) {
+                                ColorSheetTab.WALLPAPER_COLORS ->
+                                    R.string.wallpaper_color_subheader
+                                ColorSheetTab.OTHER_COLORS -> R.string.preset_color_subheader
+                                ColorSheetTab.STYLES -> R.string.color_style_subheader
+                                ColorSheetTab.TUNE -> R.string.color_tune_subheader
+                                ColorSheetTab.ADVANCED -> R.string.color_advanced_subheader
+                            }
+                        ),
+                    color = colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
             if (selectedTab == ColorSheetTab.STYLES) {
                 StyleRow(
@@ -366,6 +384,11 @@ fun ColorFloatingSheetLanding(
                 )
             } else if (selectedTab == ColorSheetTab.TUNE) {
                 ColorTuningPanel(
+                    colorTuning = previewingColorTuning,
+                    onColorTuningChange = onColorTuningChange,
+                )
+            } else if (selectedTab == ColorSheetTab.ADVANCED) {
+                ColorAdvancedPanel(
                     colorTuning = previewingColorTuning,
                     onColorTuningChange = onColorTuningChange,
                 )
@@ -467,16 +490,29 @@ private fun ColorSheetTabRow(
                         iconRes = com.android.wallpaper.R.drawable.ic_tune_black_24dp,
                     )
                 )
+                add(
+                    ColorToolbarTab(
+                        tab = ColorSheetTab.ADVANCED,
+                        labelRes = R.string.color_advanced_tab,
+                        iconRes = R.drawable.ic_settings,
+                    )
+                )
             }
         }
-    val toolbarModifier =
-        modifier
-            .wrapContentWidth()
-            .clip(RoundedCornerShape(50))
-            .background(colorScheme.surfaceBright)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .let { if (tabs.size > 4) it.horizontalScroll(rememberScrollState()) else it }
-    Row(modifier = toolbarModifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        val scrollState = rememberScrollState()
+        Row(
+            modifier =
+                Modifier.clip(RoundedCornerShape(50))
+                    .background(colorScheme.surfaceBright)
+                    .widthIn(max = maxWidth)
+                    .horizontalScroll(scrollState)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
         tabs.forEach { item ->
             val selected = selectedTab == item.tab
             val isCompact = tabs.size >= 3
@@ -535,6 +571,140 @@ private fun ColorSheetTabRow(
                 }
             }
         }
+        }
+    }
+}
+
+@Composable
+private fun ColorAdvancedPanel(
+    colorTuning: ColorTuning,
+    onColorTuningChange: (ColorTuning) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val exportLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("application/json")
+        ) { uri ->
+            if (uri != null) {
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        val json =
+                            Settings.Secure.getString(
+                                context.contentResolver,
+                                ColorTuning.SETTING,
+                            ) ?: "{}"
+                        context.contentResolver.openOutputStream(uri)?.use {
+                            it.write(json.toByteArray())
+                        }
+                    }
+                }
+            }
+        }
+    val importLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) {
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        val text =
+                            context.contentResolver.openInputStream(uri)?.bufferedReader()?.use {
+                                it.readText()
+                            }
+                        if (
+                            !text.isNullOrEmpty() &&
+                                runCatching { JSONObject(text) }.isSuccess
+                        ) {
+                            Settings.Secure.putString(
+                                context.contentResolver,
+                                ColorTuning.SETTING,
+                                text,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
+        AdvancedSwitch(
+            title = stringResource(R.string.color_accurate_shades_title),
+            description = stringResource(R.string.color_accurate_shades_description),
+            checked = colorTuning.accurateShades,
+            onCheckedChange = {
+                onColorTuningChange(colorTuning.withAccurateShades(it))
+            },
+        )
+        AdvancedSwitch(
+            title = stringResource(R.string.color_tinted_text_title),
+            description = stringResource(R.string.color_tinted_text_description),
+            checked = colorTuning.tintedText,
+            onCheckedChange = {
+                onColorTuningChange(colorTuning.withTintedText(it))
+            },
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilledTonalButton(
+                onClick = { exportLauncher.launch("colors.json") },
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(text = stringResource(R.string.color_advanced_backup))
+            }
+            FilledTonalButton(
+                onClick = { importLauncher.launch(arrayOf("application/json")) },
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(text = stringResource(R.string.color_advanced_restore))
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdvancedSwitch(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val colorScheme: CustomColorScheme = LocalAnimatedColorScheme.current
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = colorScheme.onSurface,
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = description,
+                color = colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            thumbContent = {
+                Icon(
+                    painter =
+                        painterResource(
+                            if (checked) {
+                                com.android.wallpaper.R.drawable.ic_check_wallpaper
+                            } else {
+                                com.android.wallpaper.R.drawable.ic_close
+                            }
+                        ),
+                    contentDescription = null,
+                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                )
+            },
+        )
     }
 }
 

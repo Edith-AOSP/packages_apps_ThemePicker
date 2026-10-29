@@ -29,12 +29,16 @@ data class ColorTuning(
     val accentSaturation: Int = NEUTRAL,
     val backgroundSaturation: Int = NEUTRAL,
     val backgroundLightness: Int = NEUTRAL,
+    val accurateShades: Boolean = true,
+    val tintedText: Boolean = true,
 ) {
     val isNeutral: Boolean
         get() =
             accentSaturation == NEUTRAL &&
                 backgroundSaturation == NEUTRAL &&
-                backgroundLightness == NEUTRAL
+                backgroundLightness == NEUTRAL &&
+                accurateShades &&
+                tintedText
 
     fun withAccentSaturation(value: Int) = copy(accentSaturation = value.coerceIn(MIN, MAX))
 
@@ -43,6 +47,10 @@ data class ColorTuning(
 
     fun withBackgroundLightness(value: Int) =
         copy(backgroundLightness = value.coerceIn(MIN, MAX))
+
+    fun withAccurateShades(value: Boolean) = copy(accurateShades = value)
+
+    fun withTintedText(value: Boolean) = copy(tintedText = value)
 
     companion object {
         const val NEUTRAL = 100
@@ -53,6 +61,8 @@ data class ColorTuning(
         const val KEY_BACKGROUND_SATURATION =
             "android.theme.customization.background_saturation"
         const val KEY_BACKGROUND_LIGHTNESS = "android.theme.customization.background_lightness"
+        const val KEY_ACCURATE_SHADES = "android.theme.customization.accurate_shades"
+        const val KEY_TINTED_TEXT = "android.theme.customization.tinted_text"
 
         val DEFAULT = ColorTuning()
 
@@ -73,6 +83,8 @@ data class ColorTuning(
                     json.optInt(KEY_BACKGROUND_SATURATION, NEUTRAL).coerceIn(MIN, MAX),
                 backgroundLightness =
                     json.optInt(KEY_BACKGROUND_LIGHTNESS, NEUTRAL).coerceIn(MIN, MAX),
+                accurateShades = json.optInt(KEY_ACCURATE_SHADES, 1) != 0,
+                tintedText = json.optInt(KEY_TINTED_TEXT, 1) != 0,
             )
 
         /**
@@ -89,6 +101,8 @@ data class ColorTuning(
             json.put(KEY_ACCENT_SATURATION, tuning.accentSaturation)
             json.put(KEY_BACKGROUND_SATURATION, tuning.backgroundSaturation)
             json.put(KEY_BACKGROUND_LIGHTNESS, tuning.backgroundLightness)
+            json.put(KEY_ACCURATE_SHADES, if (tuning.accurateShades) 1 else 0)
+            json.put(KEY_TINTED_TEXT, if (tuning.tintedText) 1 else 0)
             return json.toString()
         }
 

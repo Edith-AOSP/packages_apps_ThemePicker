@@ -520,6 +520,7 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
                                             colorTuning.accentSaturation,
                                             colorTuning.backgroundSaturation,
                                             colorTuning.backgroundLightness,
+                                            colorTuning.accurateShades,
                                         )
                                     }
                                 } else colorUpdateViewModel.resetPreview()
@@ -563,6 +564,7 @@ constructor(private val defaultCustomizationOptionsBinder: DefaultCustomizationO
                                         colorTuning.accentSaturation,
                                         colorTuning.backgroundSaturation,
                                         colorTuning.backgroundLightness,
+                                        colorTuning.accurateShades,
                                     )
                                 }
                             }

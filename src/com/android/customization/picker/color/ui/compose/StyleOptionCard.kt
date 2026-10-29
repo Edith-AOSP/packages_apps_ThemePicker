@@ -69,6 +69,7 @@ fun StyleOptionCard(
                         previewingColorTuning.accentSaturation,
                         previewingColorTuning.backgroundSaturation,
                         previewingColorTuning.backgroundLightness,
+                        previewingColorTuning.accurateShades,
                     )
                     .materialScheme
             }

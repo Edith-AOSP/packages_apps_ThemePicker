@@ -142,6 +142,7 @@ constructor(
                 colorTuning.accentSaturation,
                 colorTuning.backgroundSaturation,
                 colorTuning.backgroundLightness,
+                colorTuning.accurateShades,
             ),
             ColorScheme(
                 colorSeed,
@@ -150,6 +151,7 @@ constructor(
                 colorTuning.accentSaturation,
                 colorTuning.backgroundSaturation,
                 colorTuning.backgroundLightness,
+                colorTuning.accurateShades,
             ),
             isDarkMode,
         )
